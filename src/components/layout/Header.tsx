@@ -75,7 +75,27 @@ export const Header: React.FC = () => {
           </nav>
 
           {/* Right Action Controls */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            {/* Version Switcher Badge */}
+            <div className="hidden md:flex items-center bg-[#0B0B0B] border border-white/15 p-1 rounded-sm text-[11px] font-mono">
+              <Link
+                href="/"
+                className={`px-2.5 py-1 rounded-sm transition-colors ${
+                  pathname === '/' ? 'bg-[#CCFF00] text-[#050505] font-bold' : 'text-neutral-400 hover:text-white'
+                }`}
+              >
+                V1 BASELINE
+              </Link>
+              <Link
+                href="/v2"
+                className={`px-2.5 py-1 rounded-sm transition-colors ${
+                  pathname === '/v2' ? 'bg-[#CCFF00] text-[#050505] font-bold' : 'text-neutral-400 hover:text-white'
+                }`}
+              >
+                V2 KINETIC
+              </Link>
+            </div>
+
             <Link
               href="#subscribe"
               data-cursor-label="GO"
