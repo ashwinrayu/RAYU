@@ -1,0 +1,79 @@
+'use client';
+
+import React from 'react';
+import Link from 'next/link';
+import { motion } from 'framer-motion';
+import { Cpu, Globe, User, MessageSquare, Dices, ArrowRight } from 'lucide-react';
+import { TOPICS_DATA } from '@/data/resources';
+
+export const ExploreTopics: React.FC = () => {
+  const getIcon = (name: string) => {
+    switch (name) {
+      case 'Cpu':
+        return <Cpu size={22} className="text-[#CCFF00]" />;
+      case 'Globe':
+        return <Globe size={22} className="text-[#CCFF00]" />;
+      case 'User':
+        return <User size={22} className="text-[#CCFF00]" />;
+      case 'MessageSquare':
+        return <MessageSquare size={22} className="text-[#CCFF00]" />;
+      case 'Dices':
+        return <Dices size={22} className="text-[#CCFF00]" />;
+      default:
+        return <Cpu size={22} className="text-[#CCFF00]" />;
+    }
+  };
+
+  return (
+    <section className="bg-[#050505] text-white py-24 border-t border-white/10 relative">
+      <div className="max-w-7xl mx-auto px-6 md:px-12">
+        {/* Section Header */}
+        <div className="mb-12 pb-4 border-b border-white/10">
+          <h2 className="text-3xl md:text-5xl font-black tracking-tight uppercase">
+            EXPLORE BY <span className="text-[#CCFF00]">TOPIC</span>
+          </h2>
+        </div>
+
+        {/* 5 Topic Cards Grid matching reference */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          {TOPICS_DATA.map((topic, idx) => (
+            <motion.div
+              key={topic.id}
+              initial={{ opacity: 0, y: 25 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: idx * 0.08 }}
+            >
+              <Link
+                href={`/articles?category=${topic.name}`}
+                data-cursor-label="VIEW"
+                className="group flex flex-col justify-between h-56 p-6 bg-[#0B0B0B] border border-white/10 rounded-sm hover:border-[#CCFF00]/60 hover:-translate-y-1.5 transition-all duration-300 relative overflow-hidden"
+              >
+                {/* Top Icon & Badge */}
+                <div>
+                  <div className="w-10 h-10 rounded-sm border border-white/10 bg-white/5 flex items-center justify-center mb-6 group-hover:border-[#CCFF00] group-hover:bg-[#CCFF00]/10 transition-colors">
+                    {getIcon(topic.iconName)}
+                  </div>
+                  <h3 className="text-sm font-bold tracking-wider text-white group-hover:text-[#CCFF00] transition-colors mb-2 uppercase">
+                    {topic.name}
+                  </h3>
+                  <p className="text-xs text-neutral-400 leading-relaxed font-normal">
+                    {topic.description}
+                  </p>
+                </div>
+
+                {/* Bottom Arrow Indicator */}
+                <div className="flex justify-end pt-4 border-t border-white/5">
+                  <ArrowRight
+                    size={14}
+                    className="text-neutral-500 group-hover:text-[#CCFF00] group-hover:translate-x-1 transition-all"
+                  />
+                </div>
+              </Link>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+};
