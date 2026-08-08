@@ -1,22 +1,71 @@
-'use client';
-
 import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
-import { ArrowRight, Eye, User, Filter, Quote } from 'lucide-react';
+import { Metadata } from 'next';
+import { ArrowRight, Quote } from 'lucide-react';
+
+export const metadata: Metadata = {
+  title: 'About RAYU — Raw Awareness. Unfiltered Perspective.',
+  description:
+    'RAYU is an independent running commentary on technology, the world, life, ideas, and observations. Posted as it happens, not after it is edited into something safer.',
+  alternates: {
+    canonical: 'https://rayu.com/about',
+  },
+  openGraph: {
+    title: 'About RAYU — Raw Awareness. Unfiltered Perspective.',
+    description:
+      'RAYU is an independent running commentary on technology, the world, life, ideas, and observations.',
+    url: 'https://rayu.com/about',
+    siteName: 'RAYU',
+    type: 'profile',
+    images: ['https://rayu.com/api/og?title=ABOUT%20RAYU&category=ABOUT'],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'About RAYU — Thinking as it happens',
+    description: 'Raw awareness. Straight to you. Unfiltered.',
+    images: ['https://rayu.com/api/og?title=ABOUT%20RAYU&category=ABOUT'],
+    creator: '@thisisrayu',
+  },
+};
 
 export default function AboutPage() {
+  const personOrganizationSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'RAYU',
+    url: 'https://rayu.com',
+    logo: 'https://rayu.com/icon.svg',
+    description: 'Unfiltered running commentary on technology, the world, life, and ideas.',
+    founder: {
+      '@type': 'Person',
+      name: 'RAYU',
+      jobTitle: 'Independent Technologist & Writer',
+      url: 'https://rayu.com/about',
+      sameAs: [
+        'https://x.com/thisisrayu',
+        'https://instagram.com/thisisrayu',
+        'https://youtube.com/@thisisrayu',
+      ],
+    },
+    sameAs: [
+      'https://x.com/thisisrayu',
+      'https://instagram.com/thisisrayu',
+      'https://youtube.com/@thisisrayu',
+    ],
+  };
+
   return (
     <div className="bg-[#050505] text-white pt-32 pb-24 min-h-screen">
+      {/* Inject Person & Organization JSON-LD Schema */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(personOrganizationSchema) }}
+      />
+
       <div className="max-w-5xl mx-auto px-6 md:px-12">
         {/* Header Title */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="mb-16 border-b border-white/10 pb-10"
-        >
+        <div className="mb-16 border-b border-white/10 pb-10">
           <span className="text-xs font-mono font-bold tracking-widest text-[#CCFF00] uppercase block mb-3">
             ABOUT RAYU
           </span>
@@ -27,7 +76,7 @@ export default function AboutPage() {
           <p className="text-lg md:text-xl text-neutral-300 max-w-2xl leading-relaxed">
             Tech. World. Life. Whatever&apos;s actually on my mind — posted as it happens, not after it&apos;s been cleaned up into something safer.
           </p>
-        </motion.div>
+        </div>
 
         {/* Section 1: WHAT IS RAYU? */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 mb-20">
@@ -101,7 +150,7 @@ export default function AboutPage() {
           <div className="md:col-span-5 relative aspect-[4/5] rounded-sm overflow-hidden border border-white/10 bg-neutral-900">
             <Image
               src="https://images.unsplash.com/photo-1509198397868-475647b2a1e5?q=80&w=1000&auto=format&fit=crop"
-              alt="Rayu Creator"
+              alt="Rayu Creator Silhouette"
               fill
               className="object-cover grayscale contrast-150 brightness-75"
             />
@@ -123,7 +172,8 @@ export default function AboutPage() {
             <div className="pt-4">
               <Link
                 href="/contact"
-                className="cta-element inline-flex items-center gap-3 bg-[#CCFF00] text-[#050505] text-xs font-bold uppercase tracking-wider px-6 py-3.5 rounded-sm hover:bg-[#b8e600] transition-colors"
+                data-cursor-label="GO"
+                className="cta-element btn-sweep inline-flex items-center gap-3 bg-[#CCFF00] text-[#050505] text-xs font-bold uppercase tracking-wider px-6 py-3.5 rounded-sm hover:bg-[#b8e600] transition-colors"
               >
                 <span>GET IN TOUCH WITH ME</span>
                 <ArrowRight size={14} />

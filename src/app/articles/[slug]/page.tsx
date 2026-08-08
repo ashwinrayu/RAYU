@@ -1,34 +1,154 @@
-'use client';
-
-import React, { useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useParams } from 'next/navigation';
-import { motion } from 'framer-motion';
+import { Metadata } from 'next';
+import { notFound } from 'next/navigation';
 import { ArrowLeft, ArrowRight, Share2, Check, Clock, Calendar } from 'lucide-react';
 import { IconX } from '@/components/ui/SocialIcons';
 import { ARTICLES_DATA } from '@/data/articles';
 
-export default function ArticleDetailPage() {
-  const params = useParams();
-  const slug = params?.slug as string;
-  const [copied, setCopied] = useState(false);
+interface Props {
+  params: Promise<{ slug: string }>;
+}
 
-  const article = ARTICLES_DATA.find((a) => a.slug === slug) || ARTICLES_DATA[0];
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const resolvedParams = await params;
+  const article = ARTICLES_DATA.find((a) => a.slug === resolvedParams.slug);
+
+  if (!article) {
+    return {
+      title: 'Article Not Found — RAYU',
+      description: 'The requested article could not be found.',
+    };
+  }
+
+  const baseUrl = 'https://rayu.com';
+  const articleUrl = `${baseUrl}/articles/${article.slug}`;
+  const ogImageUrl = `${baseUrl}/api/og?title=${encodeURIComponent(article.title)}&category=${encodeURIComponent(article.category)}&date=${encodeURIComponent(article.date)}`;
+  const teaserDescription = `${article.excerpt} Read raw, unfiltered commentary on ${article.category.toLowerCase()} at RAYU.`;
+
+  return {
+    title: `${article.title} — RAYU`,
+    description: teaserDescription.slice(0, 160),
+    alternates: {
+      canonical: articleUrl,
+    },
+    openGraph: {
+      title: `${article.title} — RAYU`,
+      description: teaserDescription,
+      url: articleUrl,
+      siteName: 'RAYU',
+      type: 'article',
+      publishedTime: article.date,
+      authors: ['RAYU'],
+      tags: article.tags,
+      images: [
+        {
+          url: ogImageUrl,
+          width: 1200,
+          height: 630,
+          alt: article.title,
+        },
+      ],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${article.title} — RAYU`,
+      description: teaserDescription,
+      images: [ogImageUrl],
+      creator: '@thisisrayu',
+    },
+  };
+}
+
+export default async function ArticleDetailPage({ params }: Props) {
+  const resolvedParams = await params;
+  const article = ARTICLES_DATA.find((a) => a.slug === resolvedParams.slug);
+
+  if (!article) {
+    notFound();
+  }
+
   const currentIndex = ARTICLES_DATA.findIndex((a) => a.id === article.id);
   const nextArticle = ARTICLES_DATA[(currentIndex + 1) % ARTICLES_DATA.length];
   const prevArticle = ARTICLES_DATA[(currentIndex - 1 + ARTICLES_DATA.length) % ARTICLES_DATA.length];
 
-  const handleCopyLink = () => {
-    if (typeof window !== 'undefined') {
-      navigator.clipboard.writeText(window.location.href);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
+  const baseUrl = 'https://rayu.com';
+
+  // BlogPosting JSON-LD Schema
+  const blogPostingSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BlogPosting',
+    headline: article.title,
+    description: article.excerpt,
+    datePublished: article.date,
+    dateModified: article.date,
+    author: {
+      '@type': 'Person',
+      name: 'RAYU',
+      url: 'https://rayu.com/about',
+      sameAs: [
+        'https://x.com/thisisrayu',
+        'https://instagram.com/thisisrayu',
+        'https://youtube.com/@thisisrayu',
+      ],
+    },
+    publisher: {
+      '@type': 'Organization',
+      name: 'RAYU',
+      logo: {
+        '@type': 'ImageObject',
+        url: `${baseUrl}/icon.svg`,
+      },
+    },
+    image: article.imageUrl,
+    mainEntityOfPage: `${baseUrl}/articles/${article.slug}`,
+  };
+
+  // BreadcrumbList JSON-LD Schema
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Home',
+        item: baseUrl,
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: 'Articles',
+        item: `${baseUrl}/articles`,
+      },
+      {
+        '@type': 'ListItem',
+        position: 3,
+        name: article.category,
+        item: `${baseUrl}/articles?category=${article.category}`,
+      },
+      {
+        '@type': 'ListItem',
+        position: 4,
+        name: article.title,
+        item: `${baseUrl}/articles/${article.slug}`,
+      },
+    ],
   };
 
   return (
     <article className="bg-[#050505] text-white pt-32 pb-24 min-h-screen">
+      {/* Inject JSON-LD Schemas */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(blogPostingSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
+
       <div className="max-w-4xl mx-auto px-6 md:px-12">
         {/* Back Link */}
         <div className="mb-8">
@@ -78,20 +198,14 @@ export default function ArticleDetailPage() {
             </div>
 
             <div className="flex items-center space-x-3">
-              <button
-                onClick={handleCopyLink}
-                className="flex items-center gap-1.5 text-neutral-400 hover:text-[#CCFF00] transition-colors border border-white/10 px-3 py-1.5 rounded-sm"
-              >
-                {copied ? <Check size={14} className="text-[#CCFF00]" /> : <Share2 size={14} />}
-                <span>{copied ? 'COPIED!' : 'SHARE'}</span>
-              </button>
               <a
-                href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(article.title)}&url=${encodeURIComponent(typeof window !== 'undefined' ? window.location.href : '')}`}
+                href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(article.title)}&url=${encodeURIComponent(`${baseUrl}/articles/${article.slug}`)}`}
                 target="_blank"
                 rel="noreferrer"
-                className="text-neutral-400 hover:text-[#CCFF00] transition-colors border border-white/10 p-1.5 rounded-sm"
+                className="flex items-center gap-2 text-neutral-400 hover:text-[#CCFF00] transition-colors border border-white/10 px-3 py-1.5 rounded-sm"
               >
                 <IconX size={14} />
+                <span>SHARE ON X</span>
               </a>
             </div>
           </div>
@@ -113,12 +227,12 @@ export default function ArticleDetailPage() {
           {article.content.split('\n\n').map((paragraph, index) => {
             if (paragraph.startsWith('### ')) {
               return (
-                <h3
+                <h2
                   key={index}
                   className="text-2xl font-bold tracking-tight text-white uppercase pt-6 pb-2 border-b border-white/10"
                 >
                   {paragraph.replace('### ', '')}
-                </h3>
+                </h2>
               );
             }
             if (paragraph.startsWith('> ')) {

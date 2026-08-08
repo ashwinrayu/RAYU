@@ -4,10 +4,19 @@ import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
-import { Search, ArrowRight, Filter } from 'lucide-react';
+import { Search, ArrowRight } from 'lucide-react';
 import { ARTICLES_DATA } from '@/data/articles';
 
 const CATEGORIES = ['ALL', 'TECH', 'WORLD', 'LIFE', 'THOUGHTS', 'RANDOM'];
+
+const CATEGORY_DESCRIPTIONS: { [key: string]: string } = {
+  ALL: 'Explore long-form essays, observations, and unfiltered commentary across artificial intelligence, internet culture, and modern philosophy.',
+  TECH: 'Deep dives into artificial intelligence, autonomous agents, modern software architecture, and the future of technology.',
+  WORLD: 'Commentary on internet evolution, changing digital landscapes, dark forest web theories, and global shifts.',
+  LIFE: 'Personal reflections, first-principles realizations, mindset shifts, and unvarnished life lessons.',
+  THOUGHTS: 'Direct takes, unfiltered opinions, and persistent questions about human capability and AI dependency.',
+  RANDOM: 'Eclectic observations, unexpected ideas, and curious discoveries worth sharing.',
+};
 
 export default function ArticlesPage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -38,8 +47,8 @@ export default function ArticlesPage() {
           <h1 className="text-4xl sm:text-6xl font-black tracking-tight uppercase leading-none mb-6">
             ARTICLES & <span className="text-[#CCFF00]">ESSAYS</span>
           </h1>
-          <p className="text-neutral-400 text-sm sm:text-base max-w-xl">
-            Long-form commentary on artificial intelligence, internet culture, philosophy, and personal realizations.
+          <p className="text-neutral-400 text-sm sm:text-base max-w-2xl leading-relaxed font-normal">
+            {CATEGORY_DESCRIPTIONS[selectedCategory] || CATEGORY_DESCRIPTIONS.ALL}
           </p>
         </div>
 
@@ -83,6 +92,7 @@ export default function ArticlesPage() {
             </span>
             <Link
               href={`/articles/${featuredArticle.slug}`}
+              data-cursor-label="VIEW"
               className="group grid grid-cols-1 lg:grid-cols-12 gap-8 bg-[#0B0B0B] border border-white/15 rounded-sm overflow-hidden hover:border-[#CCFF00] transition-colors duration-300"
             >
               <div className="lg:col-span-7 relative aspect-[16/9] lg:aspect-auto w-full bg-neutral-900 overflow-hidden">
@@ -129,7 +139,8 @@ export default function ArticlesPage() {
             >
               <Link
                 href={`/articles/${article.slug}`}
-                className="group flex flex-col justify-between h-full bg-[#0B0B0B] border border-white/10 rounded-sm overflow-hidden hover:border-[#CCFF00]/60 transition-all duration-300 hover:-translate-y-1"
+                data-cursor-label="VIEW"
+                className="group flex flex-col justify-between h-full bg-[#0B0B0B] border border-white/10 rounded-sm overflow-hidden hover:border-[#CCFF00]/60 transition-all duration-300 hover:-translate-y-1.5"
               >
                 <div>
                   <div className="relative aspect-[16/10] w-full bg-neutral-900 overflow-hidden">
