@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Syne, Plus_Jakarta_Sans, JetBrains_Mono } from 'next/font/google';
+import { Outfit, Inter, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
@@ -8,16 +8,16 @@ import { ScrollProgress } from '@/components/ui/ScrollProgress';
 import { PageIntro } from '@/components/ui/PageIntro';
 import { PageTransition } from '@/components/ui/PageTransition';
 
-const syne = Syne({
+const outfit = Outfit({
   subsets: ['latin'],
-  variable: '--font-syne',
-  weight: ['700', '800'],
+  variable: '--font-outfit',
+  weight: ['600', '700', '800', '900'],
 });
 
-const plusJakarta = Plus_Jakarta_Sans({
+const inter = Inter({
   subsets: ['latin'],
-  variable: '--font-plus-jakarta',
-  weight: ['400', '500', '600', '700', '800'],
+  variable: '--font-inter',
+  weight: ['400', '500', '600', '700', '800', '900'],
 });
 
 const jetbrainsMono = JetBrains_Mono({
@@ -68,7 +68,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${syne.variable} ${plusJakarta.variable} ${jetbrainsMono.variable} dark`}
+      className={`${outfit.variable} ${inter.variable} ${jetbrainsMono.variable} dark`}
     >
       <body className="bg-[#050505] text-[#EBEBEB] antialiased selection:bg-[#CCFF00] selection:text-[#050505] font-sans min-h-screen flex flex-col relative bg-grain-animated">
         <PageIntro />
