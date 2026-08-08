@@ -1,136 +1,79 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
-import { motion } from 'framer-motion';
-import { ArrowRight, Sparkles } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import gsap from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { ParticleField } from '@/components/ui/ParticleField';
-
-gsap.registerPlugin(ScrollTrigger);
+import { CinematicBackground } from '@/components/ui/CinematicBackground';
 
 export const HeroV2: React.FC = () => {
   const containerRef = useRef<HTMLDivElement | null>(null);
+
   const rawRef = useRef<HTMLHeadingElement | null>(null);
   const awarenessRef = useRef<HTMLHeadingElement | null>(null);
   const youRef = useRef<HTMLHeadingElement | null>(null);
   const unfilteredRef = useRef<HTMLHeadingElement | null>(null);
-  const mainWordmarkRef = useRef<HTMLHeadingElement | null>(null);
+
+  const wordmarkRef = useRef<HTMLHeadingElement | null>(null);
   const brandStatementRef = useRef<HTMLDivElement | null>(null);
   const taglineRef = useRef<HTMLDivElement | null>(null);
   const ctaGroupRef = useRef<HTMLDivElement | null>(null);
-  const imageFrameRef = useRef<HTMLDivElement | null>(null);
-  const [animationCompleted, setAnimationCompleted] = useState(false);
 
   useEffect(() => {
     const ctx = gsap.context(() => {
-      const tl = gsap.timeline({
-        onComplete: () => setAnimationCompleted(true),
+      const mainTl = gsap.timeline();
+
+      // Initial state setup — autoAlpha: 0 completely hides opacity + visibility
+      gsap.set([rawRef.current, awarenessRef.current, youRef.current, unfilteredRef.current], {
+        autoAlpha: 0,
+        scale: 0.85,
       });
 
-      // PHASE 01: Initial minimal black screen (0.0s - 0.3s)
-      tl.set([rawRef.current, awarenessRef.current, youRef.current, unfilteredRef.current, mainWordmarkRef.current], {
-        opacity: 0,
-        y: 60,
-        scale: 0.9,
+      gsap.set([wordmarkRef.current, brandStatementRef.current, taglineRef.current, ctaGroupRef.current], {
+        autoAlpha: 0,
+        y: 35,
       });
-      tl.set(imageFrameRef.current, { opacity: 0, scale: 0.85, clipPath: 'inset(50% 0% 50% 0%)' });
-      tl.set([brandStatementRef.current, taglineRef.current, ctaGroupRef.current], { opacity: 0, y: 30 });
 
-      // PHASE 02: RAW kinetic typography entry (0.4s - 0.9s)
-      tl.to(rawRef.current, {
-        opacity: 1,
+      // PHASE 01 -> PHASE 02: RAW
+      mainTl.set(rawRef.current, { autoAlpha: 1, y: 40, scale: 0.9 })
+        .to(rawRef.current, { autoAlpha: 1, y: 0, scale: 1, duration: 0.4, ease: 'power3.out' })
+        .to(rawRef.current, { autoAlpha: 0, y: -30, duration: 0.3, ease: 'power2.in' }, '+=0.15');
+
+      // PHASE 03: AWARENESS (PURE KINETIC TYPOGRAPHY — NO IMAGE BOX)
+      mainTl.set(awarenessRef.current, { autoAlpha: 1, scale: 0.9, y: 30 })
+        .to(awarenessRef.current, { autoAlpha: 1, scale: 1, y: 0, duration: 0.45, ease: 'power3.out' })
+        .to(awarenessRef.current, { autoAlpha: 0, y: -30, scale: 0.95, duration: 0.3, ease: 'power2.in' }, '+=0.2');
+
+      // PHASE 04: YOU
+      mainTl.set(youRef.current, { autoAlpha: 1, y: 40, scale: 0.9 })
+        .to(youRef.current, { autoAlpha: 1, y: 0, scale: 1, duration: 0.35, ease: 'power3.out' })
+        .to(youRef.current, { autoAlpha: 0, y: -30, duration: 0.25, ease: 'power2.in' }, '+=0.15');
+
+      // PHASE 05: UNFILTERED.
+      mainTl.set(unfilteredRef.current, { autoAlpha: 1, y: 40, scale: 0.9 })
+        .to(unfilteredRef.current, { autoAlpha: 1, y: 0, scale: 1, duration: 0.45, ease: 'power4.out' })
+        .to(unfilteredRef.current, { autoAlpha: 0, scale: 1.05, duration: 0.3, ease: 'power2.in' }, '+=0.2');
+
+      // PHASE 06-08: RAYU. Final Hero Assembly
+      mainTl.to(wordmarkRef.current, {
+        autoAlpha: 1,
         y: 0,
-        scale: 1,
         duration: 0.6,
-        ease: 'power3.out',
-      });
-      tl.to(rawRef.current, {
-        opacity: 0.2,
-        y: -40,
-        duration: 0.4,
-        ease: 'power2.in',
-      }, '+=0.2');
-
-      // PHASE 03: AWARENESS entry with image mask expansion (1.2s - 1.8s)
-      tl.to(awarenessRef.current, {
-        opacity: 1,
-        y: 0,
-        scale: 1,
-        duration: 0.6,
-        ease: 'power3.out',
-      }, '-=0.2');
-      tl.to(imageFrameRef.current, {
-        opacity: 1,
-        scale: 1,
-        clipPath: 'inset(0% 0% 0% 0%)',
-        duration: 0.7,
         ease: 'expo.out',
-      }, '-=0.4');
-      tl.to([awarenessRef.current, imageFrameRef.current], {
-        opacity: 0.2,
-        y: -40,
+      })
+      .to(brandStatementRef.current, {
+        autoAlpha: 1,
+        y: 0,
         duration: 0.4,
-        ease: 'power2.in',
-      }, '+=0.2');
-
-      // PHASE 04: YOU kinetic entry (2.0s - 2.4s)
-      tl.to(youRef.current, {
-        opacity: 1,
-        y: 0,
-        scale: 1,
-        duration: 0.5,
         ease: 'power3.out',
-      }, '-=0.2');
-      tl.to(youRef.current, {
-        opacity: 0.2,
-        y: -30,
-        duration: 0.3,
-        ease: 'power2.in',
-      }, '+=0.2');
-
-      // PHASE 05: UNFILTERED. statement (2.6s - 3.1s)
-      tl.to(unfilteredRef.current, {
-        opacity: 1,
+      }, '-=0.2')
+      .to([taglineRef.current, ctaGroupRef.current], {
+        autoAlpha: 1,
         y: 0,
-        scale: 1,
-        duration: 0.6,
-        ease: 'power4.out',
+        stagger: 0.1,
+        duration: 0.4,
+        ease: 'power3.out',
       }, '-=0.1');
-      tl.to(unfilteredRef.current, {
-        opacity: 0,
-        y: -40,
-        duration: 0.4,
-        ease: 'power2.in',
-      }, '+=0.3');
-
-      // PHASE 06: Convergence into dominant RAYU. wordmark (3.3s - 4.0s)
-      tl.to(mainWordmarkRef.current, {
-        opacity: 1,
-        y: 0,
-        scale: 1,
-        duration: 0.8,
-        ease: 'expo.out',
-      });
-
-      // PHASE 07: Brand statement reveal
-      tl.to(brandStatementRef.current, {
-        opacity: 1,
-        y: 0,
-        duration: 0.6,
-        ease: 'power3.out',
-      }, '-=0.4');
-
-      // PHASE 08: Tagline & CTA reveal
-      tl.to([taglineRef.current, ctaGroupRef.current], {
-        opacity: 1,
-        y: 0,
-        stagger: 0.15,
-        duration: 0.6,
-        ease: 'power3.out',
-      }, '-=0.2');
     }, containerRef);
 
     return () => ctx.revert();
@@ -139,79 +82,96 @@ export const HeroV2: React.FC = () => {
   return (
     <section
       ref={containerRef}
-      className="relative min-h-screen bg-[#050505] text-white flex flex-col justify-between pt-28 pb-8 overflow-hidden select-none"
+      className="relative min-h-screen bg-[#030303] text-white flex flex-col justify-between pt-24 pb-6 overflow-hidden select-none"
     >
-      {/* Background Particle Field */}
-      <ParticleField />
+      {/* 100% Exact User-Provided Background Image */}
+      <CinematicBackground />
 
-      {/* Kinetic Stage Overlay Container */}
-      <div className="max-w-7xl mx-auto px-6 md:px-12 w-full relative z-10 my-auto min-h-[520px] flex items-center justify-center">
-        {/* Kinetic Phase Typography Canvas */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
-          {/* Phase 02: RAW */}
+      {/* Left Vertical Sidebar Metadata (100% Exact to reference image) */}
+      <div className="hidden lg:flex flex-col justify-between absolute left-8 top-28 bottom-10 z-20 pointer-events-none">
+        <div className="flex flex-col items-center space-y-4">
+          <span className="text-xs font-mono font-bold text-white tracking-widest">01</span>
+          <div className="w-[1px] h-12 bg-neutral-700" />
+          <div
+            className="text-[10px] font-mono tracking-[0.35em] text-neutral-400 uppercase font-medium"
+            style={{
+              writingMode: 'vertical-rl',
+              transform: 'rotate(180deg)',
+            }}
+          >
+            THINKING AS IT HAPPENS
+          </div>
+          <div className="w-[1px] h-8 bg-neutral-700" />
+        </div>
+
+        <div className="w-8 h-8 rounded-full border border-neutral-700 flex items-center justify-center text-[10px] font-mono text-neutral-300 font-bold">
+          N
+        </div>
+      </div>
+
+      {/* Right Vertical Pagination Indicators (100% Exact to reference image) */}
+      <div className="hidden lg:flex flex-col items-center space-y-3.5 absolute right-8 top-1/2 -translate-y-1/2 z-20 pointer-events-none">
+        <div className="w-2.5 h-2.5 rounded-full bg-[#CCFF00] shadow-[0_0_10px_#CCFF00]" />
+        <div className="w-2 h-2 rounded-full border border-neutral-600" />
+        <div className="w-2 h-2 rounded-full border border-neutral-600" />
+        <div className="w-2 h-2 rounded-full border border-neutral-600" />
+      </div>
+
+      {/* Hero Central Stage Container */}
+      <div className="max-w-7xl mx-auto px-6 md:px-16 lg:px-24 w-full relative z-10 my-auto min-h-[500px] flex items-center">
+        {/* Pure Kinetic Typography Intro Overlay (Phases 02-05 — NO IMAGE BOX) */}
+        <div className="absolute inset-0 flex items-center justify-center text-center pointer-events-none z-30">
           <h2
             ref={rawRef}
-            className="text-8xl sm:text-9xl md:text-[13rem] font-black tracking-tighter text-white uppercase leading-none opacity-0 absolute"
+            className="text-7xl sm:text-9xl md:text-[12rem] font-black tracking-tighter text-white uppercase leading-none invisible opacity-0"
           >
             RAW
           </h2>
 
-          {/* Phase 03: AWARENESS & Image Mask */}
-          <div className="flex flex-col items-center absolute">
-            <h2
-              ref={awarenessRef}
-              className="text-6xl sm:text-8xl md:text-[10rem] font-black tracking-tighter text-[#CCFF00] uppercase leading-none opacity-0 mb-4"
-            >
-              AWARENESS
-            </h2>
-            <div
-              ref={imageFrameRef}
-              className="w-80 sm:w-[480px] h-44 sm:h-64 relative rounded-sm overflow-hidden border border-[#CCFF00]/40 shadow-[0_0_40px_rgba(204,255,0,0.2)] opacity-0"
-            >
-              <Image
-                src="https://images.unsplash.com/photo-1509198397868-475647b2a1e5?q=80&w=1000&auto=format&fit=crop"
-                alt="Awareness Kinetic Frame"
-                fill
-                className="object-cover grayscale contrast-150"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-transparent to-transparent" />
-            </div>
-          </div>
+          <h2
+            ref={awarenessRef}
+            className="text-6xl sm:text-8xl md:text-[10rem] font-black tracking-tighter text-[#CCFF00] uppercase leading-none invisible opacity-0"
+          >
+            AWARENESS
+          </h2>
 
-          {/* Phase 04: YOU */}
           <h2
             ref={youRef}
-            className="text-8xl sm:text-9xl md:text-[13rem] font-black tracking-tighter text-white uppercase leading-none opacity-0 absolute"
+            className="text-7xl sm:text-9xl md:text-[12rem] font-black tracking-tighter text-white uppercase leading-none invisible opacity-0"
           >
             YOU
           </h2>
 
-          {/* Phase 05: UNFILTERED. */}
           <h2
             ref={unfilteredRef}
-            className="text-7xl sm:text-9xl md:text-[11rem] font-black tracking-tighter text-[#CCFF00] uppercase leading-none opacity-0 absolute"
+            className="text-6xl sm:text-8xl md:text-[10rem] font-black tracking-tighter text-[#CCFF00] uppercase leading-none invisible opacity-0"
           >
             UNFILTERED.
           </h2>
         </div>
 
-        {/* Phase 06-08: Main RAYU. Hero State */}
+        {/* 100% Exact RAYU. Hero State */}
         <div className="max-w-3xl w-full text-left relative z-20">
+          {/* RAYU. Wordmark (Matching reference image) */}
           <h1
-            ref={mainWordmarkRef}
-            className="text-7xl sm:text-8xl md:text-9xl lg:text-[11.5rem] font-extrabold tracking-tighter leading-none mb-6 select-none opacity-0"
+            ref={wordmarkRef}
+            className="text-7xl sm:text-8xl md:text-9xl lg:text-[12.5rem] font-black tracking-tighter leading-none mb-6 select-none opacity-0 invisible"
           >
-            RA<span className="text-[#CCFF00]">Y</span>U.
+            <span className="text-[#EBEBEB] inline-block">RA</span>
+            <span className="text-[#CCFF00] inline-block drop-shadow-[0_0_35px_rgba(204,255,0,0.8)]">Y</span>
+            <span className="text-[#EBEBEB] inline-block">U.</span>
           </h1>
 
-          <div ref={brandStatementRef} className="mb-8 opacity-0">
-            <h2 className="text-sm sm:text-base md:text-lg font-mono tracking-wider text-neutral-200 uppercase font-semibold">
-              RAW AWARENESS. STRAIGHT TO YOU. <span className="text-[#CCFF00]">UNFILTERED.</span>
+          {/* Subtitle Line */}
+          <div ref={brandStatementRef} className="mb-8 opacity-0 invisible">
+            <h2 className="text-xs sm:text-sm md:text-base font-mono tracking-[0.25em] text-neutral-200 uppercase font-semibold">
+              RAW AWARENESS. STRAIGHT TO YOU. <span className="text-[#CCFF00] font-bold">UNFILTERED.</span>
             </h2>
           </div>
 
-          <div ref={taglineRef} className="opacity-0">
-            <p className="text-base sm:text-lg md:text-xl text-neutral-300 font-normal leading-relaxed mb-10 max-w-xl">
+          {/* Tagline Paragraph */}
+          <div ref={taglineRef} className="opacity-0 invisible">
+            <p className="text-sm sm:text-base md:text-lg text-neutral-300 font-normal leading-relaxed mb-10 max-w-xl">
               Tech. World. Life.<br />
               Whatever&apos;s actually on my mind —<br />
               posted{' '}
@@ -224,11 +184,12 @@ export const HeroV2: React.FC = () => {
             </p>
           </div>
 
-          <div ref={ctaGroupRef} className="flex flex-wrap items-center gap-4 opacity-0">
+          {/* Buttons Group (Matching reference image) */}
+          <div ref={ctaGroupRef} className="flex flex-wrap items-center gap-5 opacity-0 invisible">
             <Link
               href="#latest-thoughts"
               data-cursor-label="GO"
-              className="cta-element btn-sweep group inline-flex items-center gap-3 bg-[#CCFF00] text-[#050505] text-xs sm:text-sm font-bold uppercase tracking-wider px-7 py-4 rounded-sm hover:bg-[#b5e600] transition-colors duration-200 shadow-[0_0_20px_rgba(204,255,0,0.3)]"
+              className="cta-element btn-sweep group inline-flex items-center gap-3 bg-[#CCFF00] text-[#050505] text-xs font-bold uppercase tracking-wider px-8 py-4 rounded-sm hover:bg-[#b5e600] transition-colors duration-200 shadow-[0_0_25px_rgba(204,255,0,0.35)]"
             >
               <span>LATEST THOUGHTS</span>
               <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
@@ -237,45 +198,35 @@ export const HeroV2: React.FC = () => {
             <Link
               href="/about"
               data-cursor-label="GO"
-              className="group inline-flex items-center gap-3 bg-black/40 border border-white/20 text-white text-xs sm:text-sm font-bold uppercase tracking-wider px-7 py-4 rounded-sm hover:border-[#CCFF00] hover:text-[#CCFF00] transition-colors duration-200 backdrop-blur-sm"
+              className="group inline-flex items-center gap-3 bg-black/40 border border-white/20 text-white text-xs font-bold uppercase tracking-wider px-7 py-4 rounded-sm hover:border-[#CCFF00] hover:text-[#CCFF00] transition-colors duration-200 backdrop-blur-sm"
             >
               <span>ABOUT RAYU</span>
               <div className="w-5 h-5 rounded-full border border-current flex items-center justify-center">
                 <ArrowRight size={12} className="group-hover:translate-x-0.5 transition-transform" />
               </div>
             </Link>
-
-            <div className="flex items-center gap-2 text-xs font-mono text-[#CCFF00] border border-[#CCFF00]/30 px-3 py-1.5 rounded-sm bg-[#CCFF00]/10 ml-auto sm:ml-0">
-              <Sparkles size={14} />
-              <span>V2 KINETIC MOTION ENGINE</span>
-            </div>
           </div>
         </div>
       </div>
 
-      {/* Hero Micro Details Bottom Bar */}
-      <div className="max-w-7xl mx-auto px-6 md:px-12 w-full relative z-10 pt-12">
-        <div className="flex items-center justify-between border-t border-white/10 pt-6 text-xs font-mono text-neutral-400">
-          <div className="font-bold text-white tracking-widest text-sm">01</div>
-          <div className="flex items-center gap-3 tracking-widest">
-            <span className="uppercase text-neutral-400 font-semibold">SCROLL TO EXPLORE</span>
-            <div className="w-12 h-[1px] bg-neutral-700 relative overflow-hidden">
-              <motion.div
-                animate={{ x: [-48, 48] }}
-                transition={{ repeat: Infinity, duration: 1.8, ease: 'easeInOut' }}
-                className="w-12 h-full bg-[#CCFF00]"
-              />
+      {/* Bottom Bar Layout (100% Exact to reference image) */}
+      <div className="max-w-7xl mx-auto px-6 md:px-16 lg:px-24 w-full relative z-10 pt-8 border-t border-white/10">
+        <div className="flex items-center justify-between text-[11px] font-mono text-neutral-400">
+          <div className="w-12" />
+
+          {/* Center Capsule Pill Mouse Icon & Scroll Label */}
+          <div className="flex flex-col items-center space-y-1">
+            <div className="w-4 h-7 rounded-full border border-neutral-500 flex items-center justify-center">
+              <div className="w-1 h-2 bg-[#CCFF00] rounded-full animate-bounce" />
             </div>
+            <span className="uppercase tracking-[0.25em] text-neutral-400 font-semibold text-[10px]">
+              SCROLL TO EXPLORE
+            </span>
           </div>
-          <div className="hidden sm:flex items-center gap-6">
-            <div className="text-right leading-tight uppercase font-semibold text-[10px] text-neutral-400">
-              THINKING<br />AS IT<br />HAPPENS
-            </div>
-            <div className="flex space-x-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#CCFF00] shadow-[0_0_6px_#CCFF00]" />
-              <span className="w-1.5 h-1.5 rounded-full bg-neutral-600" />
-              <span className="w-1.5 h-1.5 rounded-full bg-neutral-600" />
-            </div>
+
+          {/* Right ESTD. 2024 */}
+          <div className="font-mono text-neutral-400 tracking-widest text-xs font-semibold">
+            ESTD. 2024
           </div>
         </div>
       </div>
