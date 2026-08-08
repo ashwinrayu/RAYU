@@ -21,12 +21,11 @@ export const HeroV2: React.FC = () => {
 
   useEffect(() => {
     const ctx = gsap.context(() => {
-      const mainTl = gsap.timeline();
-
-      // Initial state setup — autoAlpha: 0 completely hides opacity + visibility
+      // 1. Initial State: Hide all elements cleanly via GSAP autoAlpha
       gsap.set([rawRef.current, awarenessRef.current, youRef.current, unfilteredRef.current], {
         autoAlpha: 0,
-        scale: 0.85,
+        y: 40,
+        scale: 0.9,
       });
 
       gsap.set([wordmarkRef.current, brandStatementRef.current, taglineRef.current, ctaGroupRef.current], {
@@ -34,46 +33,44 @@ export const HeroV2: React.FC = () => {
         y: 35,
       });
 
-      // PHASE 01 -> PHASE 02: RAW
-      mainTl.set(rawRef.current, { autoAlpha: 1, y: 40, scale: 0.9 })
-        .to(rawRef.current, { autoAlpha: 1, y: 0, scale: 1, duration: 0.4, ease: 'power3.out' })
-        .to(rawRef.current, { autoAlpha: 0, y: -30, duration: 0.3, ease: 'power2.in' }, '+=0.15');
+      const mainTl = gsap.timeline({ delay: 0.1 });
 
-      // PHASE 03: AWARENESS (PURE KINETIC TYPOGRAPHY — NO IMAGE BOX)
-      mainTl.set(awarenessRef.current, { autoAlpha: 1, scale: 0.9, y: 30 })
-        .to(awarenessRef.current, { autoAlpha: 1, scale: 1, y: 0, duration: 0.45, ease: 'power3.out' })
-        .to(awarenessRef.current, { autoAlpha: 0, y: -30, scale: 0.95, duration: 0.3, ease: 'power2.in' }, '+=0.2');
+      // PHASE 02: RAW (0.6s total)
+      mainTl.to(rawRef.current, { autoAlpha: 1, y: 0, scale: 1, duration: 0.5, ease: 'power3.out' })
+            .to(rawRef.current, { autoAlpha: 0, y: -30, duration: 0.35, ease: 'power2.in' }, '+=0.2');
 
-      // PHASE 04: YOU
-      mainTl.set(youRef.current, { autoAlpha: 1, y: 40, scale: 0.9 })
-        .to(youRef.current, { autoAlpha: 1, y: 0, scale: 1, duration: 0.35, ease: 'power3.out' })
-        .to(youRef.current, { autoAlpha: 0, y: -30, duration: 0.25, ease: 'power2.in' }, '+=0.15');
+      // PHASE 03: AWARENESS (0.7s total)
+      mainTl.to(awarenessRef.current, { autoAlpha: 1, y: 0, scale: 1, duration: 0.55, ease: 'power3.out' })
+            .to(awarenessRef.current, { autoAlpha: 0, y: -30, duration: 0.35, ease: 'power2.in' }, '+=0.25');
 
-      // PHASE 05: UNFILTERED.
-      mainTl.set(unfilteredRef.current, { autoAlpha: 1, y: 40, scale: 0.9 })
-        .to(unfilteredRef.current, { autoAlpha: 1, y: 0, scale: 1, duration: 0.45, ease: 'power4.out' })
-        .to(unfilteredRef.current, { autoAlpha: 0, scale: 1.05, duration: 0.3, ease: 'power2.in' }, '+=0.2');
+      // PHASE 04: YOU (0.6s total)
+      mainTl.to(youRef.current, { autoAlpha: 1, y: 0, scale: 1, duration: 0.45, ease: 'power3.out' })
+            .to(youRef.current, { autoAlpha: 0, y: -30, duration: 0.3, ease: 'power2.in' }, '+=0.2');
+
+      // PHASE 05: UNFILTERED. (0.7s total)
+      mainTl.to(unfilteredRef.current, { autoAlpha: 1, y: 0, scale: 1, duration: 0.55, ease: 'power4.out' })
+            .to(unfilteredRef.current, { autoAlpha: 0, scale: 1.05, duration: 0.35, ease: 'power2.in' }, '+=0.25');
 
       // PHASE 06-08: RAYU. Final Hero Assembly
       mainTl.to(wordmarkRef.current, {
         autoAlpha: 1,
         y: 0,
-        duration: 0.6,
+        duration: 0.75,
         ease: 'expo.out',
       })
       .to(brandStatementRef.current, {
         autoAlpha: 1,
         y: 0,
-        duration: 0.4,
+        duration: 0.5,
         ease: 'power3.out',
-      }, '-=0.2')
+      }, '-=0.3')
       .to([taglineRef.current, ctaGroupRef.current], {
         autoAlpha: 1,
         y: 0,
-        stagger: 0.1,
-        duration: 0.4,
+        stagger: 0.12,
+        duration: 0.5,
         ease: 'power3.out',
-      }, '-=0.1');
+      }, '-=0.15');
     }, containerRef);
 
     return () => ctx.revert();
@@ -119,32 +116,32 @@ export const HeroV2: React.FC = () => {
 
       {/* Hero Central Stage Container */}
       <div className="max-w-7xl mx-auto px-6 md:px-16 lg:px-24 w-full relative z-10 my-auto min-h-[500px] flex items-center">
-        {/* Pure Kinetic Typography Intro Overlay (Phases 02-05 — NO IMAGE BOX) */}
+        {/* Pure Kinetic Typography Intro Overlay (Phases 02-05) */}
         <div className="absolute inset-0 flex items-center justify-center text-center pointer-events-none z-30">
           <h2
             ref={rawRef}
-            className="text-7xl sm:text-9xl md:text-[12rem] font-black tracking-tighter text-white uppercase leading-none invisible opacity-0"
+            className="text-7xl sm:text-9xl md:text-[12rem] font-black tracking-tighter text-white uppercase leading-none absolute"
           >
             RAW
           </h2>
 
           <h2
             ref={awarenessRef}
-            className="text-6xl sm:text-8xl md:text-[10rem] font-black tracking-tighter text-[#CCFF00] uppercase leading-none invisible opacity-0"
+            className="text-6xl sm:text-8xl md:text-[10rem] font-black tracking-tighter text-[#CCFF00] uppercase leading-none absolute"
           >
             AWARENESS
           </h2>
 
           <h2
             ref={youRef}
-            className="text-7xl sm:text-9xl md:text-[12rem] font-black tracking-tighter text-white uppercase leading-none invisible opacity-0"
+            className="text-7xl sm:text-9xl md:text-[12rem] font-black tracking-tighter text-white uppercase leading-none absolute"
           >
             YOU
           </h2>
 
           <h2
             ref={unfilteredRef}
-            className="text-6xl sm:text-8xl md:text-[10rem] font-black tracking-tighter text-[#CCFF00] uppercase leading-none invisible opacity-0"
+            className="text-6xl sm:text-8xl md:text-[10rem] font-black tracking-tighter text-[#CCFF00] uppercase leading-none absolute"
           >
             UNFILTERED.
           </h2>
@@ -155,7 +152,7 @@ export const HeroV2: React.FC = () => {
           {/* RAYU. Wordmark (Matching reference image) */}
           <h1
             ref={wordmarkRef}
-            className="text-7xl sm:text-8xl md:text-9xl lg:text-[12.5rem] font-black tracking-tighter leading-none mb-6 select-none opacity-0 invisible"
+            className="text-7xl sm:text-8xl md:text-9xl lg:text-[12.5rem] font-black tracking-tighter leading-none mb-6 select-none"
           >
             <span className="text-[#EBEBEB] inline-block">RA</span>
             <span className="text-[#CCFF00] inline-block drop-shadow-[0_0_35px_rgba(204,255,0,0.8)]">Y</span>
@@ -163,14 +160,14 @@ export const HeroV2: React.FC = () => {
           </h1>
 
           {/* Subtitle Line */}
-          <div ref={brandStatementRef} className="mb-8 opacity-0 invisible">
+          <div ref={brandStatementRef} className="mb-8">
             <h2 className="text-xs sm:text-sm md:text-base font-mono tracking-[0.25em] text-neutral-200 uppercase font-semibold">
               RAW AWARENESS. STRAIGHT TO YOU. <span className="text-[#CCFF00] font-bold">UNFILTERED.</span>
             </h2>
           </div>
 
           {/* Tagline Paragraph */}
-          <div ref={taglineRef} className="opacity-0 invisible">
+          <div ref={taglineRef}>
             <p className="text-sm sm:text-base md:text-lg text-neutral-300 font-normal leading-relaxed mb-10 max-w-xl">
               Tech. World. Life.<br />
               Whatever&apos;s actually on my mind —<br />
@@ -185,7 +182,7 @@ export const HeroV2: React.FC = () => {
           </div>
 
           {/* Buttons Group (Matching reference image) */}
-          <div ref={ctaGroupRef} className="flex flex-wrap items-center gap-5 opacity-0 invisible">
+          <div ref={ctaGroupRef} className="flex flex-wrap items-center gap-5">
             <Link
               href="#latest-thoughts"
               data-cursor-label="GO"
