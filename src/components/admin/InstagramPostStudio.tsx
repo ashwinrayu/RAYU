@@ -200,22 +200,88 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
   const handleDownloadCard = async () => {
     if (!cardRef.current) return;
     setIsDownloading(true);
+
     try {
-      const dataUrl = await toPng(cardRef.current, {
+      // Step 1: If the background image is an external URL (Pollinations/etc),
+      // fetch it and convert to base64 first to avoid canvas CORS taint
+      let resolvedImageUrl = activeDisplayImage;
+
+      if (
+        activeDisplayImage &&
+        !activeDisplayImage.startsWith('data:') &&
+        !activeDisplayImage.startsWith('blob:')
+      ) {
+        try {
+          const proxyRes = await fetch(
+            `/api/proxy-image?url=${encodeURIComponent(activeDisplayImage)}`
+          );
+          if (proxyRes.ok) {
+            const { dataUrl } = await proxyRes.json();
+            if (dataUrl) resolvedImageUrl = dataUrl;
+          }
+        } catch {
+          // If proxy fails, try direct fetch
+          try {
+            const imgRes = await fetch(activeDisplayImage);
+            const blob = await imgRes.blob();
+            resolvedImageUrl = await new Promise<string>((resolve) => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result as string);
+              reader.readAsDataURL(blob);
+            });
+          } catch {
+            // Keep original URL and hope html-to-image handles it
+          }
+        }
+      }
+
+      // Step 2: Temporarily swap image src to resolved base64 for clean export
+      const imgEl = cardRef.current.querySelector('img') as HTMLImageElement | null;
+      const originalSrc = imgEl?.src;
+      if (imgEl && resolvedImageUrl !== activeDisplayImage) {
+        imgEl.src = resolvedImageUrl;
+        // Give browser time to render the new src
+        await new Promise((r) => setTimeout(r, 300));
+      }
+
+      // Step 3: Export card as PNG
+      const pngDataUrl = await toPng(cardRef.current, {
         quality: 1.0,
         pixelRatio: 3,
         cacheBust: true,
+        skipFonts: false,
       });
+
+      // Step 4: Restore original src
+      if (imgEl && originalSrc) imgEl.src = originalSrc;
+
+      // Step 5: Trigger download
       const link = document.createElement('a');
       link.download = `rayu-post-${selectedTemplate}-${newsItem.id}.png`;
-      link.href = dataUrl;
+      link.href = pngDataUrl;
+      document.body.appendChild(link);
       link.click();
+      document.body.removeChild(link);
+
     } catch (err) {
-      console.error('Failed to export post card image:', err);
-      const link = document.createElement('a');
-      link.download = `rayu-template-${selectedTemplate}-${newsItem.id}.png`;
-      link.href = activeDisplayImage;
-      link.click();
+      console.error('Download failed:', err);
+      // Last resort: try downloading the background image directly
+      if (activeDisplayImage) {
+        try {
+          const res = await fetch(activeDisplayImage);
+          const blob = await res.blob();
+          const blobUrl = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.download = `rayu-post-${newsItem.id}.jpg`;
+          link.href = blobUrl;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(blobUrl);
+        } catch {
+          alert('Download failed. Please try right-clicking the image and saving it manually.');
+        }
+      }
     } finally {
       setIsDownloading(false);
     }
