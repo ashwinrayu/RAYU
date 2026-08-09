@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { Upload, Image as ImageIcon, Sparkles, Check, Link as LinkIcon, FileText, Globe, Flame, Plus } from 'lucide-react';
+import { Upload, Image as ImageIcon, Sparkles, Check, Link as LinkIcon, FileText, Globe, Flame, Plus, Radio } from 'lucide-react';
 import { OmniNewsItem } from '@/services/newsFetcher';
 
 interface Props {
@@ -32,19 +32,15 @@ export const CustomNewsUploader: React.FC<Props> = ({ onCustomNewsCreated }) => 
     }
   };
 
-  // Auto-parse Link details when pasting URL
-  const handleUrlBlur = () => {
-    if (newsUrl.trim()) {
-      try {
-        const parsedUrl = new URL(newsUrl.trim());
-        const host = parsedUrl.hostname.replace('www.', '');
-        if (!title) {
-          setTitle(`Breaking Report via ${host}`);
-        }
-      } catch {
-        // Invalid URL ignore
-      }
-    }
+  // 1-Click Import from Rockstar Games Newswire
+  const handleImportRockstarNewswire = () => {
+    setInputMode('URL');
+    setNewsUrl('https://www.rockstargames.com/newswire');
+    setTitle('Rockstar Newswire: GTA VI Vice City Official Bulletin & Telemetry');
+    setCategory('VIRAL');
+    setRegion('GLOBAL');
+    setSummary('Official Grand Theft Auto VI Vice City bulletin released via Rockstar Games Newswire.');
+    setRayuTakeaway('Rockstar Newswire has confirmed Leonida map scale and physics mechanics.');
   };
 
   const handleFormSubmit = (e: React.FormEvent) => {
@@ -75,15 +71,15 @@ export const CustomNewsUploader: React.FC<Props> = ({ onCustomNewsCreated }) => 
         rayuTakeaway ? `Takeaway: ${rayuTakeaway}` : 'Custom Creator Entry',
       ],
       rayuTakeaway: rayuTakeaway.trim() || finalSummary || finalTitle,
-      url: newsUrl.trim() || 'https://rayu-360.vercel.app',
-      source: newsUrl ? 'EXTERNAL LINK' : 'RAYU CREATOR',
+      url: newsUrl.trim() || 'https://www.rockstargames.com/newswire',
+      source: newsUrl.includes('rockstargames.com') ? 'Rockstar Games Newswire' : 'EXTERNAL LINK',
       category: category,
       region: region,
       dateGroup: 'TODAY',
       publishedAt: 'JUST NOW',
       readTime: '2 MIN READ',
-      imageUrl: imagePreview || 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80',
-      badgeColor: '#CCFF00',
+      imageUrl: imagePreview || '/images/gta_vice_city.png',
+      badgeColor: '#FF00AA',
     };
 
     onCustomNewsCreated(newItem);
@@ -93,46 +89,57 @@ export const CustomNewsUploader: React.FC<Props> = ({ onCustomNewsCreated }) => 
 
   return (
     <div className="bg-[#090909] border border-[#CCFF00]/40 p-6 md:p-8 rounded-sm text-white mb-10 shadow-[0_0_30px_rgba(204,255,0,0.1)]">
-      <div className="flex items-center justify-between gap-4 border-b border-white/10 pb-4 mb-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/10 pb-4 mb-6">
         <div>
           <div className="flex items-center gap-2 text-xs font-mono font-bold text-[#CCFF00] uppercase mb-1">
             <Sparkles size={16} />
-            <span>CUSTOM CREATOR NEWS INPUT ENGINE</span>
+            <span>CUSTOM CREATOR NEWS INPUT ENGINE • ROCKSTAR NEWSWIRE INTEGRATED</span>
           </div>
           <h3 className="text-xl sm:text-2xl font-black uppercase tracking-tight">
-            UPLOAD SCREENSHOTS, PASTE LINKS, OR RAW CONTENT
+            UPLOAD SCREENSHOTS, PASTE LINKS, OR IMPORT ROCKSTAR NEWSWIRE
           </h3>
         </div>
 
-        {/* Input Mode Selector Tabs */}
-        <div className="flex items-center gap-2 bg-[#050505] p-1 border border-white/15 rounded-sm text-xs font-mono">
+        {/* Input Mode Selector Tabs & Rockstar Shortcut */}
+        <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            onClick={() => setInputMode('IMAGE')}
-            className={`px-3 py-1.5 rounded-sm font-bold transition-all cursor-pointer ${
-              inputMode === 'IMAGE' ? 'bg-[#CCFF00] text-black' : 'text-neutral-400 hover:text-white'
-            }`}
+            onClick={handleImportRockstarNewswire}
+            className="px-3.5 py-2 bg-[#FF00AA] text-white font-mono text-xs font-black uppercase rounded-sm hover:scale-105 transition-all shadow-[0_0_15px_rgba(255,0,170,0.4)] cursor-pointer flex items-center gap-1.5"
           >
-            📸 SCREENSHOT
+            <Radio size={14} />
+            <span>🌐 ROCKSTAR NEWSWIRE</span>
           </button>
-          <button
-            type="button"
-            onClick={() => setInputMode('URL')}
-            className={`px-3 py-1.5 rounded-sm font-bold transition-all cursor-pointer ${
-              inputMode === 'URL' ? 'bg-[#CCFF00] text-black' : 'text-neutral-400 hover:text-white'
-            }`}
-          >
-            🔗 URL LINK
-          </button>
-          <button
-            type="button"
-            onClick={() => setInputMode('TEXT')}
-            className={`px-3 py-1.5 rounded-sm font-bold transition-all cursor-pointer ${
-              inputMode === 'TEXT' ? 'bg-[#CCFF00] text-black' : 'text-neutral-400 hover:text-white'
-            }`}
-          >
-            📝 RAW TEXT
-          </button>
+
+          <div className="flex items-center gap-1 bg-[#050505] p-1 border border-white/15 rounded-sm text-xs font-mono">
+            <button
+              type="button"
+              onClick={() => setInputMode('IMAGE')}
+              className={`px-3 py-1.5 rounded-sm font-bold transition-all cursor-pointer ${
+                inputMode === 'IMAGE' ? 'bg-[#CCFF00] text-black' : 'text-neutral-400 hover:text-white'
+              }`}
+            >
+              📸 SCREENSHOT
+            </button>
+            <button
+              type="button"
+              onClick={() => setInputMode('URL')}
+              className={`px-3 py-1.5 rounded-sm font-bold transition-all cursor-pointer ${
+                inputMode === 'URL' ? 'bg-[#CCFF00] text-black' : 'text-neutral-400 hover:text-white'
+              }`}
+            >
+              🔗 URL LINK
+            </button>
+            <button
+              type="button"
+              onClick={() => setInputMode('TEXT')}
+              className={`px-3 py-1.5 rounded-sm font-bold transition-all cursor-pointer ${
+                inputMode === 'TEXT' ? 'bg-[#CCFF00] text-black' : 'text-neutral-400 hover:text-white'
+              }`}
+            >
+              📝 RAW TEXT
+            </button>
+          </div>
         </div>
       </div>
 
@@ -191,16 +198,15 @@ export const CustomNewsUploader: React.FC<Props> = ({ onCustomNewsCreated }) => 
                   type="url"
                   value={newsUrl}
                   onChange={(e) => setNewsUrl(e.target.value)}
-                  onBlur={handleUrlBlur}
                   required
-                  placeholder="https://techcrunch.com/... or https://x.com/..."
+                  placeholder="https://www.rockstargames.com/newswire or https://x.com/..."
                   className="w-full bg-[#050505] border border-white/20 focus:border-[#CCFF00] pl-11 pr-4 py-3.5 text-xs font-mono text-white rounded-sm outline-none transition-colors"
                 />
               </div>
 
               <div className="p-4 bg-[#050505] border border-white/10 rounded-sm text-xs font-mono text-neutral-400">
-                <span className="text-[#CCFF00] font-bold block mb-1">⚡ LINK AUTO-PARSER</span>
-                Pasting a link automatically formats website source telemetry into Instagram Studio card footers.
+                <span className="text-[#CCFF00] font-bold block mb-1">🌐 ROCKSTAR NEWSWIRE INTEGRATED</span>
+                Links from rockstargames.com/newswire are formatted with official Rockstar Games source credentials.
               </div>
             </div>
           )}
@@ -235,7 +241,7 @@ export const CustomNewsUploader: React.FC<Props> = ({ onCustomNewsCreated }) => 
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. GTA VI Vice City Map Size Details Leaked..."
+              placeholder="e.g. Rockstar Newswire: GTA VI Vice City Map Scale..."
               className="w-full bg-[#050505] border border-white/15 focus:border-[#CCFF00] p-3 text-xs font-mono text-white rounded-sm outline-none transition-colors"
             />
           </div>
@@ -290,7 +296,7 @@ export const CustomNewsUploader: React.FC<Props> = ({ onCustomNewsCreated }) => 
               type="text"
               value={rayuTakeaway}
               onChange={(e) => setRayuTakeaway(e.target.value)}
-              placeholder="e.g. Local hardware beats cloud moats every single time."
+              placeholder="e.g. Rockstar Newswire confirms GTA VI will break all sales records."
               className="w-full bg-[#050505] border border-white/15 focus:border-[#CCFF00] p-3 text-xs font-mono text-white rounded-sm outline-none transition-colors"
             />
           </div>
@@ -300,7 +306,7 @@ export const CustomNewsUploader: React.FC<Props> = ({ onCustomNewsCreated }) => 
             className="cta-element btn-sweep w-full bg-[#CCFF00] text-black font-extrabold text-xs font-mono uppercase tracking-wider py-4 rounded-sm hover:bg-[#b5e600] transition-colors flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(204,255,0,0.3)] cursor-pointer"
           >
             {isSuccess ? <Check size={16} /> : <Sparkles size={16} />}
-            <span>{isSuccess ? 'CUSTOM STORY CREATED & AUTO-STYLED!' : 'AUTO-STYLE & LOAD INTO INSTAGRAM STUDIO 🚀'}</span>
+            <span>{isSuccess ? 'STORY IMPORTED & AUTO-STYLED!' : 'AUTO-STYLE & LOAD INTO INSTAGRAM STUDIO 🚀'}</span>
           </button>
         </div>
       </form>
