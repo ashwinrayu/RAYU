@@ -123,51 +123,58 @@ function buildFallbackPrompt(title: string, summary: string, category: string): 
 
 // ── Stage 2A: Hugging Face FLUX.1-schnell (FREE) ─────────────────────────
 async function generateWithHuggingFace(prompt: string, hfKey: string): Promise<string | null> {
-  // Try FLUX.1-schnell first (fastest, free)
-  const models = [
-    'black-forest-labs/FLUX.1-schnell',
-    'stabilityai/stable-diffusion-xl-base-1.0',
-  ];
+  // Use a prompt that's short enough for FLUX.1-schnell (max ~77 tokens)
+  const shortPrompt = prompt.slice(0, 500);
 
-  for (const model of models) {
-    try {
-      const res = await fetch(`https://api-inference.huggingface.co/models/${model}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${hfKey}`,
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 50000); // 50s timeout
+
+  try {
+    const res = await fetch('https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-schnell', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${hfKey}`,
+        'x-wait-for-model': 'true', // Wait if model is loading instead of 503
+      },
+      body: JSON.stringify({
+        inputs: shortPrompt,
+        parameters: {
+          num_inference_steps: 4,
+          guidance_scale: 0,
+          width: 1024,
+          height: 1024,
         },
-        body: JSON.stringify({
-          inputs: prompt,
-          parameters: {
-            width: 1024,
-            height: 1024,
-            num_inference_steps: model.includes('schnell') ? 4 : 20,
-            guidance_scale: model.includes('schnell') ? 0 : 7.5,
-          },
-        }),
-      });
+      }),
+      signal: controller.signal,
+    });
 
-      if (res.ok) {
-        const contentType = res.headers.get('content-type') || '';
-        if (contentType.startsWith('image/')) {
-          const buffer = await res.arrayBuffer();
-          const base64 = Buffer.from(buffer).toString('base64');
-          const mimeType = contentType.includes('png') ? 'image/png' : 'image/jpeg';
-          console.log(`[RAYU AI] ✅ HuggingFace ${model} generated image`);
-          return `data:${mimeType};base64,${base64}`;
-        }
-      } else {
-        const errText = await res.text();
-        console.warn(`[RAYU AI] HuggingFace ${model} error (${res.status}):`, errText.slice(0, 150));
-        // If model is loading (503), try next
-        if (res.status === 503) continue;
-      }
-    } catch (err) {
-      console.warn(`[RAYU AI] HuggingFace ${model} fetch error:`, String(err).slice(0, 100));
+    clearTimeout(timeout);
+
+    const contentType = res.headers.get('content-type') || '';
+    console.log(`[RAYU AI] HuggingFace response: ${res.status} ${contentType}`);
+
+    if (res.ok && contentType.startsWith('image/')) {
+      const buffer = await res.arrayBuffer();
+      const base64 = Buffer.from(buffer).toString('base64');
+      const mimeType = contentType.includes('png') ? 'image/png' : 'image/jpeg';
+      console.log('[RAYU AI] ✅ HuggingFace FLUX.1-schnell generated image successfully');
+      return `data:${mimeType};base64,${base64}`;
+    } else {
+      const errText = await res.text();
+      console.warn(`[RAYU AI] HuggingFace FLUX error (${res.status}):`, errText.slice(0, 300));
+      return null;
     }
+  } catch (err) {
+    clearTimeout(timeout);
+    if ((err as Error).name === 'AbortError') {
+      console.warn('[RAYU AI] HuggingFace timed out after 50s');
+    } else {
+      console.warn('[RAYU AI] HuggingFace fetch error:', String(err).slice(0, 150));
+    }
+    return null;
   }
-  return null;
+
 }
 
 // ── Stage 2B: DALL-E 3 (if credits available) ────────────────────────────
@@ -270,24 +277,16 @@ export async function POST(req: NextRequest) {
 
     // ── Stage 2: Generate image ────────────────────────────────────────────
 
-    // Option A: HuggingFace FLUX.1 (free)
-    if (hfKey.startsWith('hf_') && (provider === 'AUTO' || provider === 'HUGGINGFACE')) {
+    // Option A: HuggingFace FLUX.1 (FREE — try this first in AUTO mode)
+    if (hfKey.startsWith('hf_')) {
       const imageUrl = await generateWithHuggingFace(visualPrompt, hfKey);
       if (imageUrl) {
         return NextResponse.json({ success: true, provider: 'HUGGINGFACE_FLUX', imageUrl, promptUsed: visualPrompt, promptSource });
       }
     }
 
-    // Option B: DALL-E 3 (if credits)
-    if (openAiKey.startsWith('sk-') && (provider === 'AUTO' || provider === 'OPENAI')) {
-      const imageUrl = await generateWithDallE(visualPrompt, openAiKey);
-      if (imageUrl) {
-        return NextResponse.json({ success: true, provider: 'OPENAI_DALLE3', imageUrl, promptUsed: visualPrompt, promptSource });
-      }
-    }
-
-    // Option C: Gemini Imagen (if valid key)
-    if (geminiKey.startsWith('AIza') && (provider === 'AUTO' || provider === 'GEMINI')) {
+    // Option B: Gemini Imagen (if valid AIza key)
+    if (geminiKey.startsWith('AIza')) {
       try {
         const geminiRes = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${geminiKey}`,
@@ -312,10 +311,18 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Option D: Pollinations AI Flux (zero auth, always works)
+    // Option C: DALL-E 3 (only if explicitly chosen — requires paid credits)
+    if (provider === 'OPENAI' && openAiKey.startsWith('sk-')) {
+      const imageUrl = await generateWithDallE(visualPrompt, openAiKey);
+      if (imageUrl) {
+        return NextResponse.json({ success: true, provider: 'OPENAI_DALLE3', imageUrl, promptUsed: visualPrompt, promptSource });
+      }
+    }
+
+    // Option D: Pollinations AI Flux — free, always works, uses Groq-generated prompt
     const seed = Math.floor(Math.random() * 999999);
-    const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(visualPrompt)}?width=1080&height=1080&nologo=true&seed=${seed}&model=flux`;
-    console.log('[RAYU AI] Using Pollinations Flux');
+    const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(visualPrompt)}?width=1080&height=1080&nologo=true&seed=${seed}&model=flux&enhance=true`;
+    console.log('[RAYU AI] Using Pollinations Flux with Groq prompt');
 
     return NextResponse.json({
       success: true,
