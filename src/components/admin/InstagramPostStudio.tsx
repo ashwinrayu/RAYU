@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Copy, Download, Check, Sparkles, Share2, AlertCircle, Quote, Cpu, Newspaper, Loader2, Film, Layers, MessageSquare, LayoutGrid, Image as ImageIcon, RefreshCw, Link as LinkIcon } from 'lucide-react';
+import { Copy, Download, Check, Sparkles, Share2, AlertCircle, Quote, Cpu, Newspaper, Loader2, Film, Layers, MessageSquare, LayoutGrid, Image as ImageIcon, RefreshCw } from 'lucide-react';
 import { OmniNewsItem } from '@/services/newsFetcher';
 import { INSTAGRAM_HANDLE, WEBSITE_DOMAIN } from '@/data/instagram';
 import { toPng } from 'html-to-image';
@@ -52,20 +52,17 @@ export const InstagramPostStudio: React.FC<Props> = ({ newsItem }) => {
   const [copied, setCopied] = useState(false);
   const [published, setPublished] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
   const [customImageUrl, setCustomImageUrl] = useState<string | null>(null);
-  const [manualUrlInput, setManualUrlInput] = useState('');
   const cardRef = useRef<HTMLDivElement | null>(null);
 
-  // Sync custom image when newsItem changes and auto-trigger AI image generator
+  // Automatically trigger content-aware AI image generation whenever newsItem changes
   useEffect(() => {
-    if (newsItem.imageUrl) {
-      setCustomImageUrl(newsItem.imageUrl);
-    } else {
-      handleAutoGenerateAI();
-    }
+    handleAutoGenerateAI();
   }, [newsItem]);
 
   const handleAutoGenerateAI = async () => {
+    setIsGeneratingAI(true);
     try {
       const res = await fetch('/api/generate-image', {
         method: 'POST',
@@ -84,26 +81,15 @@ export const InstagramPostStudio: React.FC<Props> = ({ newsItem }) => {
       }
     } catch (err) {
       console.error('Auto AI image generation failed:', err);
+      // Fallback to category pool
+      const pool = CATEGORY_IMAGE_POOL[newsItem.category] || CATEGORY_IMAGE_POOL.VIRAL;
+      setCustomImageUrl(pool[0]);
+    } finally {
+      setIsGeneratingAI(false);
     }
   };
 
   const activeDisplayImage = customImageUrl || newsItem.imageUrl || 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80';
-
-  // Cycle image dynamically per content
-  const handleRegenerateAIImage = () => {
-    const pool = CATEGORY_IMAGE_POOL[newsItem.category] || CATEGORY_IMAGE_POOL.VIRAL;
-    const currentIdx = pool.indexOf(activeDisplayImage);
-    const nextIdx = (currentIdx + 1) % pool.length;
-    setCustomImageUrl(pool[nextIdx]);
-  };
-
-  const handleApplyCustomUrl = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (manualUrlInput.trim()) {
-      setCustomImageUrl(manualUrlInput.trim());
-      setManualUrlInput('');
-    }
-  };
 
   // Generate Instagram Caption
   const instagramCaption = `⚡ RAYU SOCIAL STREAM: [${newsItem.category}]
@@ -167,48 +153,33 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
 
   return (
     <div className="bg-[#0B0B0B] border border-white/10 p-6 md:p-8 rounded-sm text-white">
-      {/* Dynamic Content Image Control Bar */}
-      <div className="mb-8 p-4 bg-[#050505] border border-[#CCFF00]/40 rounded-sm flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 shadow-[0_0_20px_rgba(204,255,0,0.1)]">
+      {/* Fully Automated Content-Aware AI Image Generator Bar */}
+      <div className="mb-8 p-4 bg-[#050505] border border-[#CCFF00]/40 rounded-sm flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 shadow-[0_0_20px_rgba(204,255,0,0.1)]">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded bg-[#CCFF00]/10 border border-[#CCFF00]/40 flex items-center justify-center text-[#CCFF00] shrink-0">
-            <ImageIcon size={20} />
+            {isGeneratingAI ? <Loader2 size={20} className="animate-spin" /> : <ImageIcon size={20} />}
           </div>
           <div>
             <div className="flex items-center gap-2 text-xs font-mono font-bold text-[#CCFF00] uppercase">
               <Sparkles size={14} />
-              <span>DYNAMIC CONTENT-AWARE AI VISUAL GENERATOR</span>
+              <span>100% AUTOMATED CONTENT-AHEAD AI IMAGE GENERATOR</span>
             </div>
             <span className="text-xs font-mono text-neutral-400">
-              STORY VISUAL GENERATED SPECIFICALLY FOR [{newsItem.category}]
+              {isGeneratingAI
+                ? 'AI GENERATING FRESH VISUAL FOR STORY CONTENT...'
+                : `VISUAL GENERATED AUTOMATICALLY FOR [${newsItem.category}] STORY`}
             </span>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            onClick={handleRegenerateAIImage}
-            className="inline-flex items-center gap-2 text-xs font-mono font-bold bg-[#CCFF00] text-black hover:bg-[#b5e600] px-4 py-2 rounded-sm transition-colors uppercase cursor-pointer"
-          >
-            <RefreshCw size={14} />
-            <span>SWAP DYNAMIC AI VISUAL 🎨</span>
-          </button>
-
-          <form onSubmit={handleApplyCustomUrl} className="flex items-center gap-2">
-            <input
-              type="url"
-              value={manualUrlInput}
-              onChange={(e) => setManualUrlInput(e.target.value)}
-              placeholder="Paste ChatGPT / Custom Image URL..."
-              className="bg-[#090909] border border-white/20 text-xs font-mono text-white px-3 py-1.5 rounded-sm outline-none focus:border-[#CCFF00] w-48 sm:w-64"
-            />
-            <button
-              type="submit"
-              className="px-3 py-1.5 bg-[#090909] border border-white/20 hover:border-[#CCFF00] text-[#CCFF00] font-mono text-xs font-bold rounded-sm uppercase cursor-pointer"
-            >
-              APPLY
-            </button>
-          </form>
-        </div>
+        <button
+          onClick={handleAutoGenerateAI}
+          disabled={isGeneratingAI}
+          className="inline-flex items-center gap-2 text-xs font-mono font-bold bg-[#CCFF00] text-black hover:bg-[#b5e600] px-4 py-2.5 rounded-sm transition-colors uppercase cursor-pointer disabled:opacity-50 shrink-0"
+        >
+          <RefreshCw size={14} className={isGeneratingAI ? 'animate-spin' : ''} />
+          <span>{isGeneratingAI ? 'GENERATING AI VISUAL...' : 'RE-GENERATE AI VISUAL 🎨'}</span>
+        </button>
       </div>
 
       {/* Format Selection Bar */}
