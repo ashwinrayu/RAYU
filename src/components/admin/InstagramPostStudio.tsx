@@ -113,6 +113,14 @@ export const InstagramPostStudio: React.FC<Props> = ({ newsItem }) => {
     }
   };
 
+  // Image load state — Pollinations can take 15-30s on first generation
+  const [imageLoaded, setImageLoaded] = useState(false);
+
+  // Reset image loaded state when URL changes
+  useEffect(() => {
+    setImageLoaded(false);
+  }, [customImageUrl]);
+
   // Image load error fallback handler
   const handleImageError = () => {
     const clientDataUrl = generateInStudioAiVisual(newsItem.title, newsItem.category, newsItem.summary);
@@ -420,14 +428,29 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
                 ref={cardRef}
                 className="relative aspect-square w-full bg-[#050505] border border-white/20 rounded-sm p-6 flex flex-col justify-between overflow-hidden shadow-2xl"
               >
-                {/* Background AI Artwork Layer with Error Fallback */}
+                {/* Background AI Artwork Layer — with loading skeleton for slow Pollinations URLs */}
                 {activeDisplayImage && (
-                  <img
-                    src={activeDisplayImage}
-                    alt={newsItem.title}
-                    onError={handleImageError}
-                    className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${isGeneratingAI ? 'opacity-20 scale-105' : 'opacity-40 scale-100'}`}
-                  />
+                  <>
+                    {/* Loading skeleton shown until image loads */}
+                    {!imageLoaded && (
+                      <div className="absolute inset-0 bg-gradient-to-br from-[#0d0d0d] via-[#111] to-[#0a0a0a] animate-pulse flex flex-col items-center justify-center gap-3">
+                        <div className="w-16 h-16 rounded-full border-2 border-[#CCFF00]/30 border-t-[#CCFF00] animate-spin" />
+                        <span className="text-[10px] font-mono text-[#CCFF00]/60 uppercase tracking-widest">GENERATING AI VISUAL...</span>
+                        <span className="text-[9px] font-mono text-neutral-600">FLUX MODEL RENDERING</span>
+                      </div>
+                    )}
+                    <img
+                      src={activeDisplayImage}
+                      alt={newsItem.title}
+                      onLoad={() => setImageLoaded(true)}
+                      onError={handleImageError}
+                      className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${
+                        imageLoaded
+                          ? (isGeneratingAI ? 'opacity-20 scale-105' : 'opacity-40 scale-100')
+                          : 'opacity-0'
+                      }`}
+                    />
+                  </>
                 )}
 
                 {/* TEMPLATE 1: KINETIC MINIMAL */}
