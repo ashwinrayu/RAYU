@@ -33,10 +33,10 @@ export const Footer: React.FC = () => {
                 <IconX size={16} />
               </a>
               <a
-                href="https://instagram.com"
+                href="https://www.instagram.com/thisisrayu/"
                 target="_blank"
                 rel="noreferrer"
-                aria-label="Instagram"
+                aria-label="Instagram @thisisrayu"
                 className="w-10 h-10 rounded-full border border-white/15 flex items-center justify-center text-neutral-400 hover:text-[#CCFF00] hover:border-[#CCFF00] transition-colors duration-200"
               >
                 <IconInstagram size={18} />
@@ -51,8 +51,8 @@ export const Footer: React.FC = () => {
                 <IconYoutube size={18} />
               </a>
               <a
-                href="mailto:contact@rayu.com"
-                aria-label="Email"
+                href="mailto:thisisrayu@gmail.com"
+                aria-label="Email thisisrayu@gmail.com"
                 className="w-10 h-10 rounded-full border border-white/15 flex items-center justify-center text-neutral-400 hover:text-[#CCFF00] hover:border-[#CCFF00] transition-colors duration-200"
               >
                 <Mail size={18} />

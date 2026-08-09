@@ -117,10 +117,10 @@ export default function ContactPage() {
                 DIRECT EMAIL
               </span>
               <a
-                href="mailto:contact@rayu.com"
+                href="mailto:thisisrayu@gmail.com"
                 className="text-xl font-mono font-bold text-white hover:text-[#CCFF00] transition-colors"
               >
-                contact@rayu.com
+                thisisrayu@gmail.com
               </a>
               <p className="text-xs text-neutral-500 font-mono mt-2">
                 Response time typically within 24 hours.
@@ -141,11 +141,11 @@ export default function ContactPage() {
                   <span className="flex items-center gap-2">
                     <IconX size={16} className="text-[#CCFF00]" /> X (TWITTER)
                   </span>
-                  <span className="text-neutral-500">@rayu_unfiltered</span>
+                  <span className="text-neutral-500">@thisisrayu</span>
                 </a>
 
                 <a
-                  href="https://instagram.com"
+                  href="https://www.instagram.com/thisisrayu/"
                   target="_blank"
                   rel="noreferrer"
                   className="flex items-center justify-between p-3 border border-white/5 rounded-sm hover:border-[#CCFF00] text-xs font-mono transition-colors"
@@ -153,7 +153,7 @@ export default function ContactPage() {
                   <span className="flex items-center gap-2">
                     <IconInstagram size={16} className="text-[#CCFF00]" /> INSTAGRAM
                   </span>
-                  <span className="text-neutral-500">@rayu.journal</span>
+                  <span className="text-neutral-500">@thisisrayu</span>
                 </a>
 
                 <a

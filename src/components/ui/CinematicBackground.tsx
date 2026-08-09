@@ -3,15 +3,20 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 
-interface DustParticle {
+interface BannerParticle {
   x: number;
   y: number;
+  baseX: number;
+  baseY: number;
   size: number;
   vx: number;
   vy: number;
   alpha: number;
+  color: string;
   pulsePhase: number;
   pulseSpeed: number;
+  sineOffset: number;
+  sineSpeed: number;
 }
 
 export const CinematicBackground: React.FC = () => {
@@ -40,26 +45,42 @@ export const CinematicBackground: React.FC = () => {
     let width = (canvas.width = canvas.parentElement?.clientWidth || window.innerWidth);
     let height = (canvas.height = canvas.parentElement?.clientHeight || window.innerHeight);
 
-    // Dust particles drifting around the central neon lime light flare
-    const dustCount = 130;
-    const dustParticles: DustParticle[] = [];
+    let mouseX = width * 0.7;
+    let mouseY = height * 0.5;
 
-    const beamY = height * 0.54;
+    const handleCanvasMouseMove = (e: MouseEvent) => {
+      const rect = canvas.getBoundingClientRect();
+      mouseX = e.clientX - rect.left;
+      mouseY = e.clientY - rect.top;
+    };
 
-    for (let i = 0; i < dustCount; i++) {
-      const x = Math.random() * width;
-      const distFromBeam = Math.pow(Math.random(), 2.5) * (height * 0.35);
-      const y = beamY + (Math.random() > 0.5 ? distFromBeam : -distFromBeam);
+    window.addEventListener('mousemove', handleCanvasMouseMove);
 
-      dustParticles.push({
-        x,
-        y,
-        size: Math.random() * 1.2 + 0.3,
-        vx: (Math.random() - 0.45) * 0.18,
-        vy: (Math.random() - 0.5) * 0.05,
-        alpha: Math.random() * 0.4 + 0.08,
+    // Dedicated Banner Side Particles (Focused on right half x = 0.45 * width to width)
+    const particleCount = 220;
+    const particles: BannerParticle[] = [];
+
+    const colors = ['#CCFF00', '#D8FF33', '#EEFF99', '#FFFFFF', '#A6E600'];
+
+    for (let i = 0; i < particleCount; i++) {
+      // Concentrated on the right 55% of the banner along the glass arc curve
+      const baseX = (0.45 + Math.random() * 0.53) * width;
+      const baseY = Math.random() * height;
+
+      particles.push({
+        x: baseX,
+        y: baseY,
+        baseX,
+        baseY,
+        size: Math.random() * 2.2 + 0.5,
+        vx: (Math.random() - 0.35) * 0.35,
+        vy: -(Math.random() * 0.45 + 0.15), // Upward drift
+        alpha: Math.random() * 0.65 + 0.15,
+        color: colors[Math.floor(Math.random() * colors.length)],
         pulsePhase: Math.random() * Math.PI * 2,
-        pulseSpeed: Math.random() * 0.012 + 0.004,
+        pulseSpeed: Math.random() * 0.02 + 0.005,
+        sineOffset: Math.random() * Math.PI * 2,
+        sineSpeed: Math.random() * 0.015 + 0.005,
       });
     }
 
@@ -77,61 +98,100 @@ export const CinematicBackground: React.FC = () => {
       time += 0.016;
       ctx.clearRect(0, 0, width, height);
 
-      // 1. Pulsing Volumetric Light Flare Overlay (Aligned with background image beam)
+      // 1. Volumetric Energy Core Glow Overlay on Right Banner Side
       const flareX = width * 0.72;
       const flareY = height * 0.54;
-      const flarePulse = 0.85 + Math.sin(time * 1.5) * 0.15;
+      const flarePulse = 0.85 + Math.sin(time * 1.6) * 0.15;
 
       const flareGradient = ctx.createRadialGradient(
         flareX,
         flareY,
-        10,
+        15,
         flareX,
         flareY,
-        width * 0.35
+        width * 0.38
       );
-      flareGradient.addColorStop(0, `rgba(255, 255, 180, ${0.45 * flarePulse})`);
-      flareGradient.addColorStop(0.2, `rgba(204, 255, 0, ${0.35 * flarePulse})`);
-      flareGradient.addColorStop(0.5, `rgba(204, 255, 0, ${0.12 * flarePulse})`);
+      flareGradient.addColorStop(0, `rgba(255, 255, 190, ${0.5 * flarePulse})`);
+      flareGradient.addColorStop(0.22, `rgba(204, 255, 0, ${0.38 * flarePulse})`);
+      flareGradient.addColorStop(0.55, `rgba(204, 255, 0, ${0.14 * flarePulse})`);
       flareGradient.addColorStop(1, 'rgba(204, 255, 0, 0)');
 
       ctx.fillStyle = flareGradient;
       ctx.fillRect(0, 0, width, height);
 
-      // 2. Animated Horizontal Shimmer Laser Beam Line
-      const beamX = (Math.sin(time * 0.8) * 0.1 + 0.6) * width;
-      const beamLineGrad = ctx.createLinearGradient(beamX - 350, flareY, beamX + 350, flareY);
+      // 2. Animated Right Banner Side Laser Beam Sweep
+      const beamX = (Math.sin(time * 0.9) * 0.08 + 0.68) * width;
+      const beamLineGrad = ctx.createLinearGradient(beamX - 320, flareY, beamX + 320, flareY);
       beamLineGrad.addColorStop(0, 'rgba(204, 255, 0, 0)');
-      beamLineGrad.addColorStop(0.5, `rgba(204, 255, 0, ${0.75 * flarePulse})`);
+      beamLineGrad.addColorStop(0.5, `rgba(204, 255, 0, ${0.8 * flarePulse})`);
       beamLineGrad.addColorStop(1, 'rgba(204, 255, 0, 0)');
 
       ctx.fillStyle = beamLineGrad;
-      ctx.fillRect(0, flareY - 1, width, 2);
+      ctx.fillRect(width * 0.35, flareY - 1, width * 0.65, 2);
 
-      // 3. Floating Fine Dust Particles
-      for (let i = 0; i < dustParticles.length; i++) {
-        const p = dustParticles[i];
+      // 3. Render Banner Side Particle Stream with Mouse Reactivity & Hairline Connections
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
         p.pulsePhase += p.pulseSpeed;
-        p.x += p.vx;
+        p.sineOffset += p.sineSpeed;
+
+        // Upward floating drift with horizontal sine oscillation
         p.y += p.vy;
+        p.x += Math.sin(p.sineOffset) * 0.35 + p.vx;
 
-        if (p.x < 0) p.x = width;
-        if (p.x > width) p.x = 0;
-        if (p.y < 0) p.y = height;
-        if (p.y > height) p.y = 0;
+        // Reset particle when it floats off the top
+        if (p.y < -10) {
+          p.y = height + 10;
+          p.x = (0.45 + Math.random() * 0.53) * width;
+        }
 
-        const distToFlare = Math.hypot(p.x - flareX, p.y - flareY);
-        const visibility = Math.max(0, 1 - distToFlare / (width * 0.45));
+        // Distance to cursor for interactive displacement
+        const dx = mouseX - p.x;
+        const dy = mouseY - p.y;
+        const dist = Math.hypot(dx, dy);
 
-        if (visibility > 0.05) {
-          const alpha = (p.alpha + Math.sin(p.pulsePhase) * 0.15) * visibility;
-          ctx.save();
-          ctx.globalAlpha = Math.max(0.02, Math.min(0.6, alpha));
-          ctx.fillStyle = distToFlare < 160 ? '#FFFFCC' : '#CCFF00';
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.restore();
+        let renderX = p.x;
+        let renderY = p.y;
+
+        if (dist < 140) {
+          const force = (1 - dist / 140) * 12;
+          renderX += (dx / dist) * force;
+          renderY += (dy / dist) * force;
+        }
+
+        // Calculate opacity based on pulse phase and right side proximity
+        const currentAlpha = Math.max(
+          0.05,
+          Math.min(0.85, (p.alpha + Math.sin(p.pulsePhase) * 0.25))
+        );
+
+        // Draw glowing particle
+        ctx.save();
+        ctx.shadowColor = p.color;
+        ctx.shadowBlur = p.size * 6;
+        ctx.globalAlpha = currentAlpha;
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(renderX, renderY, p.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        // Draw fine hairline connection links between nearby particles on right side
+        for (let j = i + 1; j < particles.length; j++) {
+          const p2 = particles[j];
+          const pDist = Math.hypot(p2.x - p.x, p2.y - p.y);
+
+          if (pDist < 65) {
+            ctx.save();
+            ctx.globalAlpha = (1 - pDist / 65) * 0.12;
+            ctx.strokeStyle = '#CCFF00';
+            ctx.lineWidth = 0.6;
+            ctx.beginPath();
+            ctx.moveTo(renderX, renderY);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.stroke();
+            ctx.restore();
+          }
         }
       }
 
@@ -143,6 +203,7 @@ export const CinematicBackground: React.FC = () => {
     return () => {
       cancelAnimationFrame(animationFrameId);
       window.removeEventListener('resize', handleResize);
+      window.removeEventListener('mousemove', handleCanvasMouseMove);
     };
   }, []);
 
@@ -165,10 +226,10 @@ export const CinematicBackground: React.FC = () => {
         />
       </div>
 
-      {/* 2. Dynamic Animated Canvas Overlay (Flare Glow, Shimmer Beam, Illuminated Dust) */}
+      {/* 2. Dynamic Banner Side Particle Animation Canvas Overlay */}
       <canvas
         ref={canvasRef}
-        className="absolute inset-0 w-full h-full block opacity-90 mix-blend-screen"
+        className="absolute inset-0 w-full h-full block opacity-95 mix-blend-screen"
       />
 
       {/* 3. Soft Radial Vignette Overlay */}

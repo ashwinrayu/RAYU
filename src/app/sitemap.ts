@@ -1,5 +1,6 @@
 import { MetadataRoute } from 'next';
 import { ARTICLES_DATA } from '@/data/articles';
+import { TOPICS_DATA } from '@/data/topics';
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = 'https://rayu.com';
@@ -13,6 +14,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
     })
   );
 
+  const topicRoutes = Object.keys(TOPICS_DATA).map((slug) => ({
+    url: `${baseUrl}/topics/${slug}`,
+    lastModified: new Date().toISOString(),
+    changeFrequency: 'weekly' as const,
+    priority: 0.8,
+  }));
+
   const articleRoutes = ARTICLES_DATA.map((article) => ({
     url: `${baseUrl}/articles/${article.slug}`,
     lastModified: new Date().toISOString(),
@@ -20,5 +28,5 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.7,
   }));
 
-  return [...staticRoutes, ...articleRoutes];
+  return [...staticRoutes, ...topicRoutes, ...articleRoutes];
 }
