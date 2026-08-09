@@ -21,31 +21,6 @@ export const TEMPLATES = [
   { id: 't5', name: '05. QUOTE SPOTLIGHT', icon: Quote, color: '#FFB800' },
 ];
 
-const CATEGORY_IMAGE_POOL: Record<string, string[]> = {
-  VIRAL: [
-    '/images/gta_vice_city.png',
-    '/images/gta_physics.png',
-    'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=1200&q=80',
-    'https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=1200&q=80',
-    'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1200&q=80',
-  ],
-  HACKS: [
-    'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1200&q=80',
-    'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1200&q=80',
-    'https://images.unsplash.com/photo-1629654297299-c8506221ca97?auto=format&fit=crop&w=1200&q=80',
-    'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=1200&q=80',
-  ],
-  INDIA: [
-    'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80',
-    'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1200&q=80',
-    'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&w=1200&q=80',
-  ],
-  TECH: [
-    'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80',
-    'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&w=1200&q=80',
-  ],
-};
-
 export const InstagramPostStudio: React.FC<Props> = ({ newsItem }) => {
   const [studioFormat, setStudioFormat] = useState<'single' | 'reels' | 'carousel' | 'twitter'>('single');
   const [selectedTemplate, setSelectedTemplate] = useState('t1');
@@ -56,10 +31,10 @@ export const InstagramPostStudio: React.FC<Props> = ({ newsItem }) => {
   const [customImageUrl, setCustomImageUrl] = useState<string | null>(null);
   const cardRef = useRef<HTMLDivElement | null>(null);
 
-  // Automatically trigger content-aware AI image generation whenever newsItem changes
+  // Automatically trigger content-aware live AI image generation whenever newsItem changes
   useEffect(() => {
     handleAutoGenerateAI();
-  }, [newsItem]);
+  }, [newsItem.id, newsItem.title]);
 
   const handleAutoGenerateAI = async () => {
     setIsGeneratingAI(true);
@@ -80,10 +55,7 @@ export const InstagramPostStudio: React.FC<Props> = ({ newsItem }) => {
         }
       }
     } catch (err) {
-      console.error('Auto AI image generation failed:', err);
-      // Fallback to category pool
-      const pool = CATEGORY_IMAGE_POOL[newsItem.category] || CATEGORY_IMAGE_POOL.VIRAL;
-      setCustomImageUrl(pool[0]);
+      console.error('Real-time AI image generation failed:', err);
     } finally {
       setIsGeneratingAI(false);
     }
@@ -153,7 +125,7 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
 
   return (
     <div className="bg-[#0B0B0B] border border-white/10 p-6 md:p-8 rounded-sm text-white">
-      {/* Fully Automated Content-Aware AI Image Generator Bar */}
+      {/* Real-Time Content AI Image Generator Bar */}
       <div className="mb-8 p-4 bg-[#050505] border border-[#CCFF00]/40 rounded-sm flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 shadow-[0_0_20px_rgba(204,255,0,0.1)]">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded bg-[#CCFF00]/10 border border-[#CCFF00]/40 flex items-center justify-center text-[#CCFF00] shrink-0">
@@ -162,12 +134,12 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
           <div>
             <div className="flex items-center gap-2 text-xs font-mono font-bold text-[#CCFF00] uppercase">
               <Sparkles size={14} />
-              <span>100% AUTOMATED CONTENT-AHEAD AI IMAGE GENERATOR</span>
+              <span>REAL-TIME DYNAMIC AI IMAGE GENERATED FROM STORY TEXT</span>
             </div>
             <span className="text-xs font-mono text-neutral-400">
               {isGeneratingAI
-                ? 'AI GENERATING FRESH VISUAL FOR STORY CONTENT...'
-                : `VISUAL GENERATED AUTOMATICALLY FOR [${newsItem.category}] STORY`}
+                ? 'AI ANALYZING CONTENT & SYNTHESIZING IMAGE...'
+                : `NEW UNIQUE AI IMAGE GENERATED FOR: "${newsItem.title.slice(0, 45)}..."`}
             </span>
           </div>
         </div>
@@ -178,7 +150,7 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
           className="inline-flex items-center gap-2 text-xs font-mono font-bold bg-[#CCFF00] text-black hover:bg-[#b5e600] px-4 py-2.5 rounded-sm transition-colors uppercase cursor-pointer disabled:opacity-50 shrink-0"
         >
           <RefreshCw size={14} className={isGeneratingAI ? 'animate-spin' : ''} />
-          <span>{isGeneratingAI ? 'GENERATING AI VISUAL...' : 'RE-GENERATE AI VISUAL 🎨'}</span>
+          <span>{isGeneratingAI ? 'SYNTHESIZING AI IMAGE...' : 'GENERATE NEW AI IMAGE 🎨'}</span>
         </button>
       </div>
 
@@ -399,7 +371,7 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
                       <span>DATA_STREAM</span>
                     </div>
                     <div className="relative z-10 my-auto py-2">
-                      <h4 className="text-xl font-mono font-bold text-white uppercase mb-4 text-[#00F0FF]">{newsItem.title}</h4>
+                      <h4 className="text-xl font-mono font-bold text-[#00F0FF] uppercase mb-4">{newsItem.title}</h4>
                       {newsItem.keyFacts && newsItem.keyFacts.length > 0 ? (
                         <div className="space-y-2">
                           {newsItem.keyFacts.slice(0, 3).map((f, i) => (

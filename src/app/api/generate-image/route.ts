@@ -6,39 +6,37 @@ export async function POST(req: NextRequest) {
   try {
     const { prompt, category, title } = await req.json();
 
-    const sanitizedTitle = (title || prompt || 'Tech News').slice(0, 100);
-    const categoryKey = (category || 'VIRAL').toUpperCase();
+    const sanitizedTitle = (title || prompt || 'tech digital world').toLowerCase();
+    
+    // Extract key visual keywords from content
+    let keywords = 'tech innovation minimalist high resolution photo 8k';
+    
+    if (sanitizedTitle.includes('gta') || sanitizedTitle.includes('vice city') || sanitizedTitle.includes('rockstar')) {
+      keywords = 'grand theft auto vice city neon palm trees hyperrealistic night lighting tropical city sports car high detail game engine render 8k';
+    } else if (sanitizedTitle.includes('llm') || sanitizedTitle.includes('ai') || sanitizedTitle.includes('model') || sanitizedTitle.includes('ollama')) {
+      keywords = 'futuristic artificial intelligence neural network glowing code matrix screen developer workstation 8k cyber aesthetic';
+    } else if (sanitizedTitle.includes('python') || sanitizedTitle.includes('bot') || sanitizedTitle.includes('terminal') || sanitizedTitle.includes('code')) {
+      keywords = 'software engineering code editor dark theme cyber terminal neon code syntax developer desk photorealistic 8k';
+    } else if (sanitizedTitle.includes('semiconductor') || sanitizedTitle.includes('chip') || sanitizedTitle.includes('fab') || sanitizedTitle.includes('silicon')) {
+      keywords = 'high tech silicon wafer semiconductor cleanroom microchip manufacturing robotic cleanroom factory 8k precision photo';
+    } else if (sanitizedTitle.includes('isro') || sanitizedTitle.includes('space') || sanitizedTitle.includes('rocket') || sanitizedTitle.includes('launch')) {
+      keywords = 'futuristic space launch vehicle spacecraft rocket landing on coastal spaceport dramatic sunset sky 8k hyperrealistic';
+    } else if (sanitizedTitle.includes('war') || sanitizedTitle.includes('defense') || sanitizedTitle.includes('navy') || sanitizedTitle.includes('cyber')) {
+      keywords = 'global cybersecurity defense network radar submarine fiber optic cable network glowing digital world map 8k';
+    } else if (sanitizedTitle.includes('india') || sanitizedTitle.includes('upi') || sanitizedTitle.includes('economy')) {
+      keywords = 'modern india technology skyline digital fintech network glowing connections 8k cinematic photograph';
+    } else {
+      keywords = `${sanitizedTitle} cinematic minimalist photorealistic 8k high quality photo`;
+    }
 
-    // High-definition dynamic AI visual endpoints keyed by story content
-    const categoryFallbackPool: Record<string, string[]> = {
-      VIRAL: [
-        '/images/gta_vice_city.png',
-        '/images/gta_physics.png',
-        'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=1200&q=80',
-        'https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=1200&q=80',
-      ],
-      HACKS: [
-        'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1200&q=80',
-        'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1200&q=80',
-        'https://images.unsplash.com/photo-1629654297299-c8506221ca97?auto=format&fit=crop&w=1200&q=80',
-      ],
-      INDIA: [
-        'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80',
-        'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1200&q=80',
-      ],
-      TECH: [
-        'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80',
-        'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&w=1200&q=80',
-      ],
-    };
-
-    const pool = categoryFallbackPool[categoryKey] || categoryFallbackPool.VIRAL;
-    const randomVisual = pool[Math.floor(Math.random() * pool.length)];
+    // Generate real-time unique AI image via Pollinations AI live synthesis API
+    const seed = Math.floor(Math.random() * 100000);
+    const dynamicAiImageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(keywords)}?width=1200&height=1200&nologo=true&seed=${seed}`;
 
     return NextResponse.json({
       success: true,
-      imageUrl: randomVisual,
-      promptUsed: sanitizedTitle,
+      imageUrl: dynamicAiImageUrl,
+      keywordsUsed: keywords,
     });
   } catch (error) {
     return NextResponse.json(
