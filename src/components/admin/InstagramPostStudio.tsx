@@ -33,10 +33,13 @@ export const InstagramPostStudio: React.FC<Props> = ({ newsItem }) => {
   const [aiProvider, setAiProvider] = useState<'OPENAI' | 'GEMINI' | 'AUTO'>('OPENAI');
   const [negativeZone, setNegativeZone] = useState<'bottom' | 'left'>('bottom');
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+  const [generationStage, setGenerationStage] = useState<'idle' | 'analyzing' | 'rendering'>('idle');
   const [elapsedTimer, setElapsedTimer] = useState(0);
   const [generationTimeMs, setGenerationTimeMs] = useState<number | null>(null);
   const [apiNotice, setApiNotice] = useState<string | null>(null);
   const [customImageUrl, setCustomImageUrl] = useState<string | null>(null);
+  const [activePrompt, setActivePrompt] = useState<string | null>(null);
+  const [activeProvider, setActiveProvider] = useState<string | null>(null);
   const cardRef = useRef<HTMLDivElement | null>(null);
 
   // Auto-generate AI background on story change
@@ -56,13 +59,17 @@ export const InstagramPostStudio: React.FC<Props> = ({ newsItem }) => {
     return () => clearInterval(interval);
   }, [isGeneratingAI]);
 
-  // Server-Side Hybrid AI Background Generator Call
+  // Two-Stage AI Content Analysis + Image Generation Pipeline
   const handleGenerateServerAiBackground = async () => {
     setIsGeneratingAI(true);
+    setGenerationStage('analyzing');
     setApiNotice(null);
+    setActivePrompt(null);
     const startTime = performance.now();
 
     try {
+      // Stage 1: GPT analyzes content → Stage 2: DALL-E renders image
+      setGenerationStage('analyzing');
       const res = await fetch('/api/generate-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -75,10 +82,16 @@ export const InstagramPostStudio: React.FC<Props> = ({ newsItem }) => {
         }),
       });
 
+      setGenerationStage('rendering');
+
       if (res.ok) {
         const data = await res.json();
         if (data.imageUrl) {
           setCustomImageUrl(data.imageUrl);
+          setActiveProvider(data.provider || null);
+        }
+        if (data.promptUsed) {
+          setActivePrompt(data.promptUsed);
         }
         if (data.notice) {
           setApiNotice(data.notice);
@@ -96,6 +109,7 @@ export const InstagramPostStudio: React.FC<Props> = ({ newsItem }) => {
       const duration = +((endTime - startTime) / 1000).toFixed(2);
       setGenerationTimeMs(duration > 0 ? duration : 1.2);
       setIsGeneratingAI(false);
+      setGenerationStage('idle');
     }
   };
 
@@ -179,12 +193,16 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
             <div>
               <div className="flex items-center gap-2 text-xs font-mono font-bold text-[#CCFF00] uppercase">
                 <Sparkles size={14} />
-                <span>HYBRID AI BACKGROUND ART + BRAND TYPOGRAPHY OVERLAY SYSTEM</span>
+                <span>2-STAGE AI VISUAL ENGINE: CONTENT ANALYSIS → IMAGE RENDER</span>
               </div>
               <span className="text-xs font-mono text-neutral-400">
                 {isGeneratingAI
-                  ? `CALLING ${aiProvider} API... GENERATING ARTWORK (${elapsedTimer}s)`
-                  : `ARTWORK COMPOSITED IN ${generationTimeMs || 1.2}s • BASE64 PAYLOAD ACTIVE`}
+                  ? generationStage === 'analyzing'
+                    ? `STAGE 1: GPT-4o READING STORY CONTENT... (${elapsedTimer}s)`
+                    : `STAGE 2: DALL-E 3 RENDERING IMAGE... (${elapsedTimer}s)`
+                  : activeProvider
+                  ? `RENDERED BY ${activeProvider} IN ${generationTimeMs || 1.2}s • CONTENT-SPECIFIC AI VISUAL`
+                  : `ARTWORK READY IN ${generationTimeMs || 1.2}s`}
               </span>
             </div>
           </div>
@@ -241,6 +259,16 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
           </div>
         </div>
 
+        {/* AI-Generated Scene Prompt Display */}
+        {activePrompt && !isGeneratingAI && (
+          <div className="p-3 bg-[#0a0a0a] border border-[#CCFF00]/20 rounded-sm">
+            <div className="text-[10px] font-mono text-[#CCFF00] uppercase mb-1.5 flex items-center gap-1.5">
+              <Sparkles size={10} />
+              <span>AI CONTENT ANALYSIS → VISUAL SCENE DESCRIPTION:</span>
+            </div>
+            <p className="text-[11px] font-mono text-neutral-300 leading-relaxed italic">{activePrompt}</p>
+          </div>
+        )}
         {apiNotice && (
           <div className="p-2.5 bg-yellow-500/10 border border-yellow-500/30 rounded-sm text-[11px] font-mono text-yellow-300 flex items-center justify-between">
             <span>💡 {apiNotice}</span>

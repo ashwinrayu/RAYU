@@ -1,50 +1,160 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 export const runtime = 'nodejs';
+export const maxDuration = 60;
 
 /**
- * Content-Specific Visual Subject Synthesizer
- * Extracts exact physical subject matter from story content for AI art generation
+ * RAYU AI Visual Engine — Two-Stage Pipeline
+ * Stage 1: GPT-4o Mini analyzes the story content and produces a rich, specific visual scene description
+ * Stage 2: DALL-E 3 renders that scene description into a cinematic 1080x1080 image
+ *
+ * This ensures every image is directly tied to the actual story content,
+ * not generic category defaults.
  */
-function extractContentSubject(title: string = '', summary: string = '', category: string = ''): string {
-  const text = `${title} ${summary} ${category}`.toLowerCase();
 
-  if (text.includes('gta') || text.includes('vice city') || text.includes('rockstar')) {
-    return 'a high-performance supercar driving down a Vice City tropical palm tree avenue at night with neon lights and ocean coast reflection';
-  } else if (text.includes('python') || text.includes('bot') || text.includes('telegram') || text.includes('whatsapp')) {
-    return 'a high-tech developer workstation laptop screen displaying glowing green Python code syntax and automation node networks in a dark cyber room';
-  } else if (text.includes('semiconductor') || text.includes('chip') || text.includes('fab') || text.includes('silicon')) {
-    return 'an intricate silicon microchip wafer held inside a futuristic semiconductor cleanroom manufacturing plant with robotic arms and laser precision';
-  } else if (text.includes('isro') || text.includes('space') || text.includes('rocket') || text.includes('launch')) {
-    return 'a futuristic spacecraft launch vehicle landing at a coastal spaceport station during a dramatic sunset ocean launch';
-  } else if (text.includes('llm') || text.includes('ai') || text.includes('ollama') || text.includes('model')) {
-    return 'a glowing artificial intelligence neural network core with holographic data streams and quantum processing matrix';
-  } else if (text.includes('war') || text.includes('cyber') || text.includes('defense') || text.includes('radar')) {
-    return 'a high-tech global cyber defense operation center with holographic world map radars, fiber optic cables, and glowing surveillance streams';
-  } else if (text.includes('economy') || text.includes('bank') || text.includes('market') || text.includes('upi')) {
-    return 'a sleek financial trading floor screen showing real-time digital currency graphs, candlestick charts, and glowing global trade networks';
-  } else {
-    return `a dramatic cinematic digital artwork representing ${title.slice(0, 70)}`;
+async function buildVisualPromptWithGPT(
+  title: string,
+  summary: string,
+  category: string,
+  openAiKey: string
+): Promise<string> {
+  const systemPrompt = `You are a world-class art director for a premium digital news magazine.
+Given a news headline and summary, you describe a single, striking, hyper-realistic photographic scene that *visually represents the core subject* of that story.
+
+Rules:
+- Describe ONE real-world physical scene — a specific place, object, person, or event captured as if by a pro photographer.
+- Do NOT include text, typography, banners, or written words in the scene.
+- Be ultra-specific: name the subject, the lighting, the environment, the mood, the camera angle.
+- The scene must feel directly related to the story — not generic.
+- Keep it under 120 words.
+- End with: "Dark charcoal atmosphere, cyber-lime green (#CCFF00) accent lighting, 8k photorealistic render, cinematic composition, lower third left as empty dark space for text overlay."`;
+
+  const userPrompt = `News Headline: "${title}"
+Category: ${category}
+Summary: "${summary}"
+
+Describe the perfect photorealistic visual scene for this story:`;
+
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${openAiKey.trim()}`,
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
+      max_tokens: 180,
+      temperature: 0.85,
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    console.error('GPT-4o Mini prompt builder error:', err);
+    throw new Error(`GPT prompt generation failed: ${err}`);
   }
+
+  const data = await res.json();
+  const visualPrompt = data.choices?.[0]?.message?.content?.trim();
+  if (!visualPrompt) throw new Error('GPT returned empty prompt');
+  return visualPrompt;
+}
+
+/**
+ * Gemini-based content analysis for visual prompt generation
+ */
+async function buildVisualPromptWithGemini(
+  title: string,
+  summary: string,
+  category: string,
+  geminiKey: string
+): Promise<string> {
+  const prompt = `You are a world-class art director for a premium digital news magazine.
+Given a news headline and summary, describe a single, striking, hyper-realistic photographic scene that visually represents the EXACT subject of this story.
+
+News Headline: "${title}"
+Category: ${category}
+Summary: "${summary}"
+
+Rules:
+- Describe ONE real physical scene — specific place, object, event.
+- NO text, logos, or words in the scene.
+- Ultra-specific: name the subject, lighting, environment, mood, camera angle.
+- Scene must directly relate to the story — not generic stock photo.
+- Under 100 words.
+- End with: "Dark charcoal atmosphere, cyber-lime green accent lighting, 8k photorealistic render, cinematic, lower third as empty dark negative space."
+
+Describe the visual scene now:`;
+
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey.trim()}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { maxOutputTokens: 200, temperature: 0.85 },
+      }),
+    }
+  );
+
+  if (!res.ok) {
+    const err = await res.text();
+    console.error('Gemini prompt builder error:', err);
+    throw new Error(`Gemini prompt generation failed: ${err}`);
+  }
+
+  const data = await res.json();
+  const visualPrompt = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+  if (!visualPrompt) throw new Error('Gemini returned empty prompt');
+  return visualPrompt;
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const { title, category, summary, provider = 'OPENAI', layout = 'bottom' } = await req.json();
-
-    const specificSubject = extractContentSubject(title, summary, category);
-    const negativeZone = layout === 'left' ? 'left' : 'bottom';
-
-    // Content-Specific Locked Brand Prompt Template
-    const basePrompt = `A striking, premium editorial-style photograph/digital art of ${specificSubject}. Dark charcoal (#050505) atmosphere, illuminated with vivid cyber lime-green (#CCFF00) ambient lighting and accent highlights. High-contrast, moody, cinematic lighting, 8k resolution, highly detailed photorealistic render. Leave the ${negativeZone} third of the frame as clean, uncluttered negative space for text overlay. No text, no words, no letters, no typography in the image itself. 1:1 square composition.`;
+    const { title = '', category = '', summary = '', provider = 'OPENAI', layout = 'bottom' } = await req.json();
 
     const openAiKey = process.env.OPENAI_API_KEY;
     const geminiKey = process.env.GEMINI_API_KEY;
 
-    // 1. OPENAI DALL·E 3 PROVIDER (Base64 payload)
-    if (provider === 'OPENAI' && openAiKey) {
+    let visualPrompt: string | null = null;
+
+    // ── STAGE 1: Intelligent Content Analysis → Rich Visual Prompt ──────────────
+    // Try GPT-4o Mini first (best quality prompt generation)
+    if (openAiKey) {
       try {
-        const openAiRes = await fetch('https://api.openai.com/v1/images/generations', {
+        visualPrompt = await buildVisualPromptWithGPT(title, summary, category, openAiKey);
+        console.log('[RAYU AI] GPT-4o Mini visual prompt:', visualPrompt);
+      } catch (err) {
+        console.warn('[RAYU AI] GPT prompt generation failed, trying Gemini:', err);
+      }
+    }
+
+    // Fallback to Gemini for prompt generation
+    if (!visualPrompt && geminiKey) {
+      try {
+        visualPrompt = await buildVisualPromptWithGemini(title, summary, category, geminiKey);
+        console.log('[RAYU AI] Gemini visual prompt:', visualPrompt);
+      } catch (err) {
+        console.warn('[RAYU AI] Gemini prompt generation failed:', err);
+      }
+    }
+
+    // Last resort: construct prompt from raw content
+    if (!visualPrompt) {
+      visualPrompt = `A dramatic, cinematic photorealistic scene representing: ${title}. ${summary?.slice(0, 120)}. Dark charcoal atmosphere, cyber-lime green accent lighting, 8k render, cinematic, lower third empty dark space.`;
+    }
+
+    // ── STAGE 2: Image Generation ─────────────────────────────────────────────
+
+    // OPENAI DALL·E 3
+    if ((provider === 'OPENAI' || provider === 'AUTO') && openAiKey) {
+      try {
+        const imageRes = await fetch('https://api.openai.com/v1/images/generations', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -52,7 +162,7 @@ export async function POST(req: NextRequest) {
           },
           body: JSON.stringify({
             model: 'dall-e-3',
-            prompt: basePrompt,
+            prompt: visualPrompt,
             n: 1,
             size: '1024x1024',
             response_format: 'b64_json',
@@ -60,37 +170,40 @@ export async function POST(req: NextRequest) {
           }),
         });
 
-        if (openAiRes.ok) {
-          const openAiData = await openAiRes.json();
-          const b64Data = openAiData.data?.[0]?.b64_json;
-          if (b64Data) {
+        if (imageRes.ok) {
+          const imageData = await imageRes.json();
+          const b64 = imageData.data?.[0]?.b64_json;
+          if (b64) {
             return NextResponse.json({
               success: true,
               provider: 'OPENAI_DALLE3',
-              imageUrl: `data:image/png;base64,${b64Data}`,
-              promptUsed: basePrompt,
+              imageUrl: `data:image/png;base64,${b64}`,
+              promptUsed: visualPrompt,
             });
           }
         } else {
-          const errText = await openAiRes.text();
-          console.error('OpenAI DALL-E 3 API Error:', errText);
+          const errText = await imageRes.text();
+          console.error('[RAYU AI] DALL-E 3 error:', errText);
         }
       } catch (err) {
-        console.error('OpenAI fetch error:', err);
+        console.error('[RAYU AI] DALL-E 3 fetch error:', err);
       }
     }
 
-    // 2. GOOGLE GEMINI IMAGEN PROVIDER (Base64 payload)
-    if (provider === 'GEMINI' && geminiKey) {
+    // GEMINI IMAGEN 3
+    if ((provider === 'GEMINI' || provider === 'AUTO') && geminiKey) {
       try {
-        const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${geminiKey.trim()}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            instances: [{ prompt: basePrompt }],
-            parameters: { sampleCount: 1, aspectRatio: '1:1', outputMimeType: 'image/jpeg' },
-          }),
-        });
+        const geminiRes = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${geminiKey.trim()}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              instances: [{ prompt: visualPrompt }],
+              parameters: { sampleCount: 1, aspectRatio: '1:1', outputMimeType: 'image/jpeg' },
+            }),
+          }
+        );
 
         if (geminiRes.ok) {
           const geminiData = await geminiRes.json();
@@ -98,33 +211,34 @@ export async function POST(req: NextRequest) {
           if (b64Image) {
             return NextResponse.json({
               success: true,
-              provider: 'GEMINI_IMAGEN',
+              provider: 'GEMINI_IMAGEN3',
               imageUrl: `data:image/jpeg;base64,${b64Image}`,
-              promptUsed: basePrompt,
+              promptUsed: visualPrompt,
             });
           }
         } else {
           const errText = await geminiRes.text();
-          console.error('Gemini Imagen API Error:', errText);
+          console.error('[RAYU AI] Gemini Imagen error:', errText);
         }
       } catch (err) {
-        console.error('Gemini fetch error:', err);
+        console.error('[RAYU AI] Gemini Imagen fetch error:', err);
       }
     }
 
-    // 3. FALLBACK CONTENT-SPECIFIC GENERATIVE VISUAL
-    const seed = Math.floor(Math.random() * 100000);
-    const fallbackUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(basePrompt)}?width=1080&height=1080&nologo=true&seed=${seed}`;
+    // ── STAGE 3: Pollinations fallback with AI-generated prompt ──────────────
+    const seed = Math.floor(Math.random() * 999999);
+    const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(visualPrompt)}?width=1080&height=1080&nologo=true&seed=${seed}&model=flux`;
 
     return NextResponse.json({
       success: true,
-      provider: openAiKey ? 'OPENAI' : geminiKey ? 'GEMINI' : 'RAYU_AI_ENGINE',
-      imageUrl: fallbackUrl,
-      promptUsed: basePrompt,
+      provider: 'POLLINATIONS_FLUX',
+      imageUrl: pollinationsUrl,
+      promptUsed: visualPrompt,
     });
   } catch (error) {
+    console.error('[RAYU AI] Fatal generate-image error:', error);
     return NextResponse.json(
-      { success: false, error: 'Server AI Image Generation failed' },
+      { success: false, error: 'AI Image Generation pipeline failed' },
       { status: 500 }
     );
   }
