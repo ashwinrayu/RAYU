@@ -5,15 +5,15 @@ import { useAuth } from '@/context/AuthContext';
 import { InstagramPostStudio } from '@/components/admin/InstagramPostStudio';
 import { OMNI_NEWS_DATA, OmniNewsItem } from '@/services/newsFetcher';
 import { Sparkles, LogOut, CheckCircle2, Lock, Mail, ArrowRight, ShieldCheck } from 'lucide-react';
-import { CONTACT_EMAIL, INSTAGRAM_HANDLE } from '@/data/instagram';
+import { INSTAGRAM_HANDLE } from '@/data/instagram';
 
 export default function AdminStudioPage() {
   const { isLoggedIn, user, login, logout } = useAuth();
   const [selectedStory, setSelectedStory] = useState<OmniNewsItem>(OMNI_NEWS_DATA[0]);
 
-  // Login form state for protected studio access
-  const [email, setEmail] = useState('thisisrayu@gmail.com');
-  const [password, setPassword] = useState('rayu2026');
+  // Production login form state
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
 
   const handleStudioLogin = (e: React.FormEvent) => {
@@ -21,7 +21,7 @@ export default function AdminStudioPage() {
     setLoginError('');
     const success = login(email, password);
     if (!success) {
-      setLoginError('Invalid credentials. Use email thisisrayu@gmail.com and password rayu2026');
+      setLoginError('Invalid email or password. Access denied.');
     }
   };
 
@@ -43,7 +43,7 @@ export default function AdminStudioPage() {
             <div className="absolute -top-16 -right-16 w-40 h-40 bg-[#CCFF00]/10 rounded-full blur-2xl pointer-events-none" />
 
             {loginError && (
-              <div className="mb-6 p-3 bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-mono rounded-sm">
+              <div className="mb-6 p-3 bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-mono rounded-sm text-center">
                 {loginError}
               </div>
             )}
@@ -60,7 +60,7 @@ export default function AdminStudioPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    placeholder="thisisrayu@gmail.com"
+                    placeholder="name@domain.com"
                     className="w-full bg-[#050505] border border-white/15 focus:border-[#CCFF00] pl-11 pr-4 py-3 text-sm text-white rounded-sm outline-none transition-colors"
                   />
                 </div>
@@ -94,7 +94,7 @@ export default function AdminStudioPage() {
 
             <div className="mt-6 pt-5 border-t border-white/10 text-center text-xs font-mono text-neutral-500">
               <ShieldCheck size={14} className="inline mr-1 text-[#CCFF00]" />
-              <span>Secured for @{INSTAGRAM_HANDLE}</span>
+              <span>Secured Session for @{INSTAGRAM_HANDLE}</span>
             </div>
           </div>
         </div>

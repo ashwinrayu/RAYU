@@ -6,8 +6,8 @@ import { Lock, Mail, ArrowRight, ShieldCheck, Sparkles } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('thisisrayu@gmail.com');
-  const [password, setPassword] = useState('rayu2026');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const { login } = useAuth();
   const router = useRouter();
@@ -19,7 +19,7 @@ export default function LoginPage() {
     if (success) {
       router.push('/admin/studio');
     } else {
-      setError('Invalid credentials. Use email thisisrayu@gmail.com and password rayu2026');
+      setError('Invalid email or password. Access denied.');
     }
   };
 
@@ -36,7 +36,7 @@ export default function LoginPage() {
             CREATOR <span className="text-[#CCFF00]">STUDIO LOGIN</span>
           </h1>
           <p className="text-xs font-mono text-neutral-400 mt-2">
-            Log in to manage live feeds & auto-generate Instagram posts for @thisisrayu
+            Log in to access the Rayu Studio & Instagram cross-publisher
           </p>
         </div>
 
@@ -46,7 +46,7 @@ export default function LoginPage() {
           <div className="absolute -top-16 -right-16 w-48 h-48 bg-[#CCFF00]/10 rounded-full blur-2xl pointer-events-none" />
 
           {error && (
-            <div className="mb-6 p-3 bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-mono rounded-sm">
+            <div className="mb-6 p-3 bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-mono rounded-sm text-center">
               {error}
             </div>
           )}
@@ -63,7 +63,7 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  placeholder="thisisrayu@gmail.com"
+                  placeholder="name@domain.com"
                   className="w-full bg-[#050505] border border-white/15 focus:border-[#CCFF00] pl-11 pr-4 py-3.5 text-sm text-white rounded-sm outline-none transition-colors"
                 />
               </div>
@@ -95,10 +95,9 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Preset Helper Note */}
           <div className="mt-6 pt-6 border-t border-white/10 text-center text-xs font-mono text-neutral-500">
             <ShieldCheck size={14} className="inline mr-1 text-[#CCFF00]" />
-            <span>Preset Account: thisisrayu@gmail.com</span>
+            <span>Encrypted Creator Session</span>
           </div>
         </div>
       </div>
