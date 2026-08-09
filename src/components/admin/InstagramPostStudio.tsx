@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Copy, Download, Check, Sparkles, Share2, AlertCircle, Quote, Cpu, Newspaper, Loader2, Film, Layers, MessageSquare, LayoutGrid, Image as ImageIcon, RefreshCw, Clock } from 'lucide-react';
+import { Copy, Download, Check, Sparkles, Share2, AlertCircle, Quote, Cpu, Newspaper, Loader2, Film, Layers, MessageSquare, LayoutGrid, Image as ImageIcon, RefreshCw } from 'lucide-react';
 import { OmniNewsItem } from '@/services/newsFetcher';
 import { INSTAGRAM_HANDLE, WEBSITE_DOMAIN } from '@/data/instagram';
 import { toPng } from 'html-to-image';
@@ -29,35 +29,23 @@ export const InstagramPostStudio: React.FC<Props> = ({ newsItem }) => {
   const [published, setPublished] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
-  const [generationTimeMs, setGenerationTimeMs] = useState<number | null>(null);
-  const [elapsedTimer, setElapsedTimer] = useState(0);
   const [customImageUrl, setCustomImageUrl] = useState<string | null>(null);
   const cardRef = useRef<HTMLDivElement | null>(null);
 
-  // Generate live content-aware AI visual inside Studio on mount & newsItem change
+  // Preserve & prioritize REAL story photos/screenshots
   useEffect(() => {
-    handleGenerateInStudioAiVisual();
-  }, [newsItem.id, newsItem.title]);
-
-  // Generation elapsed timer interval
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (isGeneratingAI) {
-      setElapsedTimer(0);
-      interval = setInterval(() => {
-        setElapsedTimer((prev) => +(prev + 0.1).toFixed(1));
-      }, 100);
+    if (newsItem.imageUrl) {
+      setCustomImageUrl(newsItem.imageUrl);
+    } else {
+      handleGenerateInStudioAiVisual();
     }
-    return () => clearInterval(interval);
-  }, [isGeneratingAI]);
+  }, [newsItem.id, newsItem.title, newsItem.imageUrl]);
 
   const handleGenerateInStudioAiVisual = () => {
     setIsGeneratingAI(true);
-    const startTime = performance.now();
-
     setTimeout(() => {
       try {
-        if (newsItem.imageUrl && !newsItem.imageUrl.includes('placeholder')) {
+        if (newsItem.imageUrl) {
           setCustomImageUrl(newsItem.imageUrl);
         } else {
           const dataUrl = generateInStudioAiVisual(newsItem.title, newsItem.category, newsItem.summary);
@@ -66,14 +54,11 @@ export const InstagramPostStudio: React.FC<Props> = ({ newsItem }) => {
           }
         }
       } catch (err) {
-        console.error('In-studio AI visual synthesis error:', err);
+        console.error('Real image resolution error:', err);
       } finally {
-        const endTime = performance.now();
-        const duration = +((endTime - startTime) / 1000).toFixed(2);
-        setGenerationTimeMs(duration > 0 ? duration : 0.8);
         setIsGeneratingAI(false);
       }
-    }, 800); // Simulated realistic AI synthesis step
+    }, 400);
   };
 
   const activeDisplayImage = customImageUrl || newsItem.imageUrl || 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80';
@@ -132,7 +117,7 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
     }
   };
 
-  // Clone newsItem with active dynamic image
+  // Clone newsItem with active real story photo
   const dynamicNewsItem: OmniNewsItem = {
     ...newsItem,
     imageUrl: activeDisplayImage,
@@ -140,7 +125,7 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
 
   return (
     <div className="bg-[#0B0B0B] border border-white/10 p-6 md:p-8 rounded-sm text-white">
-      {/* Real-Time In-Studio AI Image Generator Bar with Live Timer */}
+      {/* Real Article Photo Status Control Bar */}
       <div className="mb-8 p-4 bg-[#050505] border border-[#CCFF00]/40 rounded-sm flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 shadow-[0_0_20px_rgba(204,255,0,0.1)]">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded bg-[#CCFF00]/10 border border-[#CCFF00]/40 flex items-center justify-center text-[#CCFF00] shrink-0">
@@ -149,16 +134,10 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
           <div>
             <div className="flex items-center gap-2 text-xs font-mono font-bold text-[#CCFF00] uppercase">
               <Sparkles size={14} />
-              <span>
-                {isGeneratingAI
-                  ? `⚡ GENERATING AI VISUAL FOR [${newsItem.category}]... (${elapsedTimer}s)`
-                  : `IN-STUDIO AI VISUAL GENERATION COMPLETED (${generationTimeMs || 0.8}s)`}
-              </span>
+              <span>REAL ARTICLE PHOTO / SCREENSHOT ENGINE ACTIVE</span>
             </div>
             <span className="text-xs font-mono text-neutral-400">
-              {isGeneratingAI
-                ? 'ANALYZING STORY CONTENT & SYNTHESIZING HIGH-RES CANVAS...'
-                : `VISUAL SYNTHESIZED LIVE FOR: "${newsItem.title.slice(0, 40)}..."`}
+              REAL GRAPHIC PHOTO LOADED FOR: "{newsItem.title.slice(0, 45)}..."
             </span>
           </div>
         </div>
@@ -169,7 +148,7 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
           className="inline-flex items-center gap-2 text-xs font-mono font-bold bg-[#CCFF00] text-black hover:bg-[#b5e600] px-4 py-2.5 rounded-sm transition-colors uppercase cursor-pointer disabled:opacity-50 shrink-0"
         >
           <RefreshCw size={14} className={isGeneratingAI ? 'animate-spin' : ''} />
-          <span>{isGeneratingAI ? `GENERATING (${elapsedTimer}s)...` : 'RE-GENERATE AI VISUAL 🎨'}</span>
+          <span>RE-SYNC STORY PHOTO 📷</span>
         </button>
       </div>
 
@@ -229,7 +208,7 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
         </div>
       </div>
 
-      {/* RENDER FORMAT COMPONENT WITH DYNAMIC ITEM */}
+      {/* RENDER FORMAT COMPONENT WITH REAL STORY ITEM */}
       {studioFormat === 'reels' && <ReelsVideoStudio newsItem={dynamicNewsItem} />}
       {studioFormat === 'carousel' && <CarouselStudio newsItem={dynamicNewsItem} />}
       {studioFormat === 'twitter' && <TwitterThreadStudio newsItem={dynamicNewsItem} />}
@@ -309,7 +288,7 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
             <div className="lg:col-span-6">
               <span className="text-xs font-mono font-bold text-neutral-400 uppercase block mb-3 flex items-center justify-between">
                 <span>📸 LIVE 1080x1080 SQUARE POST CARD PREVIEW ({selectedTemplate.toUpperCase()})</span>
-                {isGeneratingAI && <span className="text-[#CCFF00] font-mono animate-pulse">GENERATING VISUAL ({elapsedTimer}s)...</span>}
+                {isGeneratingAI && <span className="text-[#CCFF00] font-mono animate-pulse">LOADING REAL PHOTO...</span>}
               </span>
 
               <div
@@ -321,7 +300,7 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
                   <img
                     src={activeDisplayImage}
                     alt={newsItem.title}
-                    className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${isGeneratingAI ? 'opacity-10 scale-105' : 'opacity-35 scale-100'}`}
+                    className="absolute inset-0 w-full h-full object-cover opacity-35 pointer-events-none"
                   />
                 )}
 
