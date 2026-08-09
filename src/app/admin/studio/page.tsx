@@ -3,19 +3,21 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { InstagramPostStudio } from '@/components/admin/InstagramPostStudio';
+import { CustomNewsUploader } from '@/components/admin/CustomNewsUploader';
 import { OMNI_NEWS_DATA, OmniNewsItem } from '@/services/newsFetcher';
 import { ARTICLES_DATA } from '@/data/articles';
 import { THOUGHTS_DATA } from '@/data/thoughts';
 import { RESOURCES_DATA } from '@/data/resources';
-import { Sparkles, LogOut, CheckCircle2, Lock, Mail, ArrowRight, ShieldCheck, Newspaper, MessageSquare, Wrench, Radio } from 'lucide-react';
+import { Sparkles, LogOut, CheckCircle2, Lock, Mail, ArrowRight, ShieldCheck, Newspaper, MessageSquare, Wrench, Radio, PlusCircle, Layers } from 'lucide-react';
 import { INSTAGRAM_HANDLE } from '@/data/instagram';
 
-type ContentSourceType = 'NEWS' | 'ARTICLES' | 'THOUGHTS' | 'RESOURCES';
+type ContentSourceType = 'CUSTOM' | 'NEWS' | 'ARTICLES' | 'THOUGHTS' | 'RESOURCES';
 
 export default function AdminStudioPage() {
   const { isLoggedIn, user, login, logout } = useAuth();
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [activeSource, setActiveSource] = useState<ContentSourceType>('NEWS');
+  const [customStories, setCustomStories] = useState<OmniNewsItem[]>([]);
   const [selectedStory, setSelectedStory] = useState<OmniNewsItem>(OMNI_NEWS_DATA[0]);
 
   // Production login form state
@@ -39,6 +41,12 @@ export default function AdminStudioPage() {
     logout();
   };
 
+  const handleCustomNewsCreated = (newItem: OmniNewsItem) => {
+    setCustomStories((prev) => [newItem, ...prev]);
+    setSelectedStory(newItem);
+    setActiveSource('CUSTOM');
+  };
+
   // Convert Articles to OmniNewsItem format for Instagram Studio
   const articleItems: OmniNewsItem[] = useMemo(() => {
     return ARTICLES_DATA.map((art) => ({
@@ -48,7 +56,7 @@ export default function AdminStudioPage() {
       fullArticleContent: art.content,
       keyFacts: art.tags.map((t) => `Core Topic Tag: ${t}`),
       rayuTakeaway: art.subtitle || art.excerpt,
-      url: `https://rayu.com/articles/${art.slug}`,
+      url: `https://rayu-360.vercel.app/articles/${art.slug}`,
       source: 'RAYU ESSAYS',
       category: 'TECH',
       region: 'GLOBAL',
@@ -69,7 +77,7 @@ export default function AdminStudioPage() {
       fullArticleContent: th.content,
       keyFacts: [th.highlightText || 'Unfiltered Real-Time Thought'],
       rayuTakeaway: th.content,
-      url: 'https://rayu.com/thoughts',
+      url: 'https://rayu-360.vercel.app/thoughts',
       source: 'RAYU THOUGHTS',
       category: 'INDIA',
       region: 'INDIA',
@@ -102,8 +110,10 @@ export default function AdminStudioPage() {
 
   const currentItemsList = useMemo(() => {
     switch (activeSource) {
+      case 'CUSTOM':
+        return customStories.length > 0 ? customStories : OMNI_NEWS_DATA;
       case 'NEWS':
-        return OMNI_NEWS_DATA;
+        return [...customStories, ...OMNI_NEWS_DATA];
       case 'ARTICLES':
         return articleItems;
       case 'THOUGHTS':
@@ -113,7 +123,7 @@ export default function AdminStudioPage() {
       default:
         return OMNI_NEWS_DATA;
     }
-  }, [activeSource, articleItems, thoughtItems, resourceItems]);
+  }, [activeSource, customStories, articleItems, thoughtItems, resourceItems]);
 
   // Protected Access Gate if not logged in & not unlocked
   if (!isLoggedIn && !isUnlocked) {
@@ -214,12 +224,35 @@ export default function AdminStudioPage() {
           </div>
         </div>
 
+        {/* Custom News Uploader Tool */}
+        <CustomNewsUploader onCustomNewsCreated={handleCustomNewsCreated} />
+
         {/* Content Source Selection Bar */}
         <div className="mb-8">
           <span className="text-xs font-mono font-bold text-neutral-400 uppercase block mb-3">
-            SELECT CONTENT SOURCE TO GENERATE INSTAGRAM POST FROM:
+            OR SELECT EXISTING CONTENT SOURCE TO GENERATE INSTAGRAM POST FROM:
           </span>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            <button
+              onClick={() => {
+                setActiveSource('CUSTOM');
+                if (customStories.length > 0) setSelectedStory(customStories[0]);
+              }}
+              className={`p-4 rounded-sm border text-left flex items-center justify-between transition-all cursor-pointer ${
+                activeSource === 'CUSTOM'
+                  ? 'bg-[#CCFF00] text-black font-bold border-[#CCFF00] shadow-[0_0_15px_rgba(204,255,0,0.3)]'
+                  : 'bg-[#0B0B0B] border-white/10 text-neutral-300 hover:border-white/30'
+              }`}
+            >
+              <div className="flex items-center gap-2 text-xs font-mono uppercase">
+                <PlusCircle size={16} />
+                <span>➕ CUSTOM UPLOADS</span>
+              </div>
+              <span className="text-[10px] font-mono border px-2 py-0.5 rounded-sm">
+                {customStories.length}
+              </span>
+            </button>
+
             <button
               onClick={() => {
                 setActiveSource('NEWS');
