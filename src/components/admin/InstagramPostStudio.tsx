@@ -8,6 +8,7 @@ import { toPng } from 'html-to-image';
 import { ReelsVideoStudio } from './ReelsVideoStudio';
 import { CarouselStudio } from './CarouselStudio';
 import { TwitterThreadStudio } from './TwitterThreadStudio';
+import { generateInStudioAiVisual } from '@/utils/aiImageGenerator';
 
 interface Props {
   newsItem: OmniNewsItem;
@@ -31,31 +32,26 @@ export const InstagramPostStudio: React.FC<Props> = ({ newsItem }) => {
   const [customImageUrl, setCustomImageUrl] = useState<string | null>(null);
   const cardRef = useRef<HTMLDivElement | null>(null);
 
-  // Automatically trigger content-aware live AI image generation whenever newsItem changes
+  // Generate live content-aware AI visual inside Studio on mount & newsItem change
   useEffect(() => {
-    handleAutoGenerateAI();
+    handleGenerateInStudioAiVisual();
   }, [newsItem.id, newsItem.title]);
 
-  const handleAutoGenerateAI = async () => {
+  const handleGenerateInStudioAiVisual = () => {
     setIsGeneratingAI(true);
     try {
-      const res = await fetch('/api/generate-image', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: newsItem.title,
-          category: newsItem.category,
-          prompt: newsItem.summary,
-        }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.imageUrl) {
-          setCustomImageUrl(data.imageUrl);
+      // 1. Check if newsItem has a valid image URL
+      if (newsItem.imageUrl && !newsItem.imageUrl.includes('placeholder')) {
+        setCustomImageUrl(newsItem.imageUrl);
+      } else {
+        // 2. Synthesize dynamic generative AI visual inside Studio canvas
+        const dataUrl = generateInStudioAiVisual(newsItem.title, newsItem.category, newsItem.summary);
+        if (dataUrl) {
+          setCustomImageUrl(dataUrl);
         }
       }
     } catch (err) {
-      console.error('Real-time AI image generation failed:', err);
+      console.error('In-studio AI visual synthesis error:', err);
     } finally {
       setIsGeneratingAI(false);
     }
@@ -125,7 +121,7 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
 
   return (
     <div className="bg-[#0B0B0B] border border-white/10 p-6 md:p-8 rounded-sm text-white">
-      {/* Real-Time Content AI Image Generator Bar */}
+      {/* Real-Time In-Studio AI Image Generator Bar */}
       <div className="mb-8 p-4 bg-[#050505] border border-[#CCFF00]/40 rounded-sm flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 shadow-[0_0_20px_rgba(204,255,0,0.1)]">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded bg-[#CCFF00]/10 border border-[#CCFF00]/40 flex items-center justify-center text-[#CCFF00] shrink-0">
@@ -134,23 +130,23 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
           <div>
             <div className="flex items-center gap-2 text-xs font-mono font-bold text-[#CCFF00] uppercase">
               <Sparkles size={14} />
-              <span>REAL-TIME DYNAMIC AI IMAGE GENERATED FROM STORY TEXT</span>
+              <span>LIVE IN-STUDIO AI VISUAL GENERATOR</span>
             </div>
             <span className="text-xs font-mono text-neutral-400">
               {isGeneratingAI
-                ? 'AI ANALYZING CONTENT & SYNTHESIZING IMAGE...'
-                : `NEW UNIQUE AI IMAGE GENERATED FOR: "${newsItem.title.slice(0, 45)}..."`}
+                ? 'SYNTHESIZING GENERATIVE AI VISUAL IN STUDIO...'
+                : `AI VISUAL GENERATED FOR: "${newsItem.title.slice(0, 45)}..."`}
             </span>
           </div>
         </div>
 
         <button
-          onClick={handleAutoGenerateAI}
+          onClick={handleGenerateInStudioAiVisual}
           disabled={isGeneratingAI}
           className="inline-flex items-center gap-2 text-xs font-mono font-bold bg-[#CCFF00] text-black hover:bg-[#b5e600] px-4 py-2.5 rounded-sm transition-colors uppercase cursor-pointer disabled:opacity-50 shrink-0"
         >
           <RefreshCw size={14} className={isGeneratingAI ? 'animate-spin' : ''} />
-          <span>{isGeneratingAI ? 'SYNTHESIZING AI IMAGE...' : 'GENERATE NEW AI IMAGE 🎨'}</span>
+          <span>{isGeneratingAI ? 'SYNTHESIZING VISUAL...' : 'RE-GENERATE AI VISUAL 🎨'}</span>
         </button>
       </div>
 
@@ -296,12 +292,12 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
                 ref={cardRef}
                 className="relative aspect-square w-full bg-[#050505] border border-white/20 rounded-sm p-6 flex flex-col justify-between overflow-hidden shadow-2xl"
               >
-                {/* Background Cover Image with Overlay */}
+                {/* Background Cover Image Layer */}
                 {activeDisplayImage && (
                   <img
                     src={activeDisplayImage}
                     alt={newsItem.title}
-                    className="absolute inset-0 w-full h-full object-cover opacity-25 pointer-events-none"
+                    className="absolute inset-0 w-full h-full object-cover opacity-35 pointer-events-none"
                   />
                 )}
 
