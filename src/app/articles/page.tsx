@@ -41,9 +41,10 @@ export default function ArticlesPage() {
       <div className="max-w-7xl mx-auto px-6 md:px-12">
         {/* Page Header */}
         <div className="mb-12 border-b border-white/10 pb-8">
-          <span className="text-xs font-mono font-bold tracking-widest text-[#CCFF00] uppercase block mb-3">
-            ARCHIVE & WRITINGS
-          </span>
+          <div className="flex items-center gap-2 px-3 py-1 rounded-sm bg-[#CCFF00]/10 border border-[#CCFF00]/30 text-[#CCFF00] text-xs font-mono font-bold uppercase mb-4 w-fit">
+            <span className="w-2 h-2 rounded-full bg-[#CCFF00] animate-ping" />
+            <span>LIVE ARTICLES STREAM • AUTO-SYNCED EVERY 5 MINS</span>
+          </div>
           <h1 className="text-4xl sm:text-6xl font-black tracking-tight uppercase leading-none mb-6">
             ARTICLES & <span className="text-[#CCFF00]">ESSAYS</span>
           </h1>

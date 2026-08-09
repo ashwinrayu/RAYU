@@ -232,26 +232,6 @@ export default async function NewsDetailPage({ params }: Props) {
           </div>
         )}
 
-        {/* Instagram Post Generator Shortcut */}
-        <div className="mb-8 p-6 bg-[#0B0B0B] border border-[#CCFF00]/40 rounded-sm flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div>
-            <span className="text-xs font-mono font-bold text-[#CCFF00] uppercase block mb-1">
-              📸 CREATOR INSTAGRAM CROSS-PUBLISHER
-            </span>
-            <span className="text-sm font-bold text-white uppercase">
-              Want to post this story to @thisisrayu on Instagram?
-            </span>
-          </div>
-
-          <Link
-            href="/admin/studio"
-            className="inline-flex items-center gap-2 bg-[#050505] border border-white/20 text-[#CCFF00] text-xs font-mono font-bold uppercase tracking-wider px-5 py-3 rounded-sm hover:border-[#CCFF00] transition-colors"
-          >
-            <span>OPEN INSTAGRAM POST STUDIO</span>
-            <ArrowRight size={14} />
-          </Link>
-        </div>
-
         {/* External Redirect Action Bar */}
         <div className="p-6 bg-[#0B0B0B] border border-white/10 rounded-sm flex flex-col sm:flex-row items-center justify-between gap-4 mb-16">
           <div>

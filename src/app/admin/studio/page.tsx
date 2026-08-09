@@ -1,14 +1,20 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { InstagramPostStudio } from '@/components/admin/InstagramPostStudio';
 import { OMNI_NEWS_DATA, OmniNewsItem } from '@/services/newsFetcher';
-import { Sparkles, LogOut, CheckCircle2, Lock, Mail, ArrowRight, ShieldCheck } from 'lucide-react';
+import { ARTICLES_DATA } from '@/data/articles';
+import { THOUGHTS_DATA } from '@/data/thoughts';
+import { RESOURCES_DATA } from '@/data/resources';
+import { Sparkles, LogOut, CheckCircle2, Lock, Mail, ArrowRight, ShieldCheck, Newspaper, MessageSquare, Wrench, Radio } from 'lucide-react';
 import { INSTAGRAM_HANDLE } from '@/data/instagram';
+
+type ContentSourceType = 'NEWS' | 'ARTICLES' | 'THOUGHTS' | 'RESOURCES';
 
 export default function AdminStudioPage() {
   const { isLoggedIn, user, login, logout } = useAuth();
+  const [activeSource, setActiveSource] = useState<ContentSourceType>('NEWS');
   const [selectedStory, setSelectedStory] = useState<OmniNewsItem>(OMNI_NEWS_DATA[0]);
 
   // Production login form state
@@ -25,6 +31,82 @@ export default function AdminStudioPage() {
     }
   };
 
+  // Convert Articles to OmniNewsItem format for Instagram Studio
+  const articleItems: OmniNewsItem[] = useMemo(() => {
+    return ARTICLES_DATA.map((art) => ({
+      id: `art-${art.id}`,
+      title: art.title,
+      summary: art.excerpt,
+      fullArticleContent: art.content,
+      keyFacts: art.tags.map((t) => `Core Topic Tag: ${t}`),
+      rayuTakeaway: art.subtitle || art.excerpt,
+      url: `https://rayu.com/articles/${art.slug}`,
+      source: 'RAYU ESSAYS',
+      category: 'TECH',
+      region: 'GLOBAL',
+      dateGroup: 'TODAY',
+      publishedAt: art.date,
+      readTime: art.readTime,
+      imageUrl: art.imageUrl,
+      badgeColor: '#CCFF00',
+    }));
+  }, []);
+
+  // Convert Thoughts to OmniNewsItem format for Instagram Studio
+  const thoughtItems: OmniNewsItem[] = useMemo(() => {
+    return THOUGHTS_DATA.map((th) => ({
+      id: `th-${th.id}`,
+      title: th.content.slice(0, 75) + '...',
+      summary: th.content,
+      fullArticleContent: th.content,
+      keyFacts: [th.highlightText || 'Unfiltered Real-Time Thought'],
+      rayuTakeaway: th.content,
+      url: 'https://rayu.com/thoughts',
+      source: 'RAYU THOUGHTS',
+      category: 'INDIA',
+      region: 'INDIA',
+      dateGroup: 'TODAY',
+      publishedAt: th.date,
+      readTime: th.timestamp,
+      badgeColor: '#CCFF00',
+    }));
+  }, []);
+
+  // Convert Resources to OmniNewsItem format for Instagram Studio
+  const resourceItems: OmniNewsItem[] = useMemo(() => {
+    return RESOURCES_DATA.map((res) => ({
+      id: `res-${res.id}`,
+      title: `${res.title} — ${res.category}`,
+      summary: res.description,
+      fullArticleContent: res.description,
+      keyFacts: [`Category: ${res.category}`, `Direct Link: ${res.url}`],
+      rayuTakeaway: res.description,
+      url: res.url,
+      source: 'RAYU RESOURCES',
+      category: 'TECH',
+      region: 'GLOBAL',
+      dateGroup: 'TODAY',
+      publishedAt: 'CURATED TOOL',
+      readTime: 'RESOURCE',
+      badgeColor: '#00F0FF',
+    }));
+  }, []);
+
+  const currentItemsList = useMemo(() => {
+    switch (activeSource) {
+      case 'NEWS':
+        return OMNI_NEWS_DATA;
+      case 'ARTICLES':
+        return articleItems;
+      case 'THOUGHTS':
+        return thoughtItems;
+      case 'RESOURCES':
+        return resourceItems;
+      default:
+        return OMNI_NEWS_DATA;
+    }
+  }, [activeSource, articleItems, thoughtItems, resourceItems]);
+
   // Protected Access Gate if not logged in
   if (!isLoggedIn) {
     return (
@@ -39,7 +121,6 @@ export default function AdminStudioPage() {
           </h1>
 
           <div className="bg-[#0B0B0B] border border-white/10 p-8 rounded-sm text-left shadow-2xl relative overflow-hidden">
-            {/* Ambient Glow */}
             <div className="absolute -top-16 -right-16 w-40 h-40 bg-[#CCFF00]/10 rounded-full blur-2xl pointer-events-none" />
 
             {loginError && (
@@ -133,14 +214,102 @@ export default function AdminStudioPage() {
           </div>
         </div>
 
-        {/* Story Selector Stream Grid */}
+        {/* Content Source Selection Bar (LIVE NEWS, ARTICLES, THOUGHTS, RESOURCES) */}
+        <div className="mb-8">
+          <span className="text-xs font-mono font-bold text-neutral-400 uppercase block mb-3">
+            SELECT CONTENT SOURCE TO GENERATE INSTAGRAM POST FROM:
+          </span>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <button
+              onClick={() => {
+                setActiveSource('NEWS');
+                setSelectedStory(OMNI_NEWS_DATA[0]);
+              }}
+              className={`p-4 rounded-sm border text-left flex items-center justify-between transition-all ${
+                activeSource === 'NEWS'
+                  ? 'bg-[#CCFF00] text-black font-bold border-[#CCFF00] shadow-[0_0_15px_rgba(204,255,0,0.3)]'
+                  : 'bg-[#0B0B0B] border-white/10 text-neutral-300 hover:border-white/30'
+              }`}
+            >
+              <div className="flex items-center gap-2 text-xs font-mono uppercase">
+                <Radio size={16} />
+                <span>⚡ LIVE STREAM</span>
+              </div>
+              <span className="text-[10px] font-mono border px-2 py-0.5 rounded-sm">
+                {OMNI_NEWS_DATA.length}
+              </span>
+            </button>
+
+            <button
+              onClick={() => {
+                setActiveSource('ARTICLES');
+                setSelectedStory(articleItems[0]);
+              }}
+              className={`p-4 rounded-sm border text-left flex items-center justify-between transition-all ${
+                activeSource === 'ARTICLES'
+                  ? 'bg-[#CCFF00] text-black font-bold border-[#CCFF00] shadow-[0_0_15px_rgba(204,255,0,0.3)]'
+                  : 'bg-[#0B0B0B] border-white/10 text-neutral-300 hover:border-white/30'
+              }`}
+            >
+              <div className="flex items-center gap-2 text-xs font-mono uppercase">
+                <Newspaper size={16} />
+                <span>📰 ARTICLES</span>
+              </div>
+              <span className="text-[10px] font-mono border px-2 py-0.5 rounded-sm">
+                {articleItems.length}
+              </span>
+            </button>
+
+            <button
+              onClick={() => {
+                setActiveSource('THOUGHTS');
+                setSelectedStory(thoughtItems[0]);
+              }}
+              className={`p-4 rounded-sm border text-left flex items-center justify-between transition-all ${
+                activeSource === 'THOUGHTS'
+                  ? 'bg-[#CCFF00] text-black font-bold border-[#CCFF00] shadow-[0_0_15px_rgba(204,255,0,0.3)]'
+                  : 'bg-[#0B0B0B] border-white/10 text-neutral-300 hover:border-white/30'
+              }`}
+            >
+              <div className="flex items-center gap-2 text-xs font-mono uppercase">
+                <MessageSquare size={16} />
+                <span>💭 THOUGHTS</span>
+              </div>
+              <span className="text-[10px] font-mono border px-2 py-0.5 rounded-sm">
+                {thoughtItems.length}
+              </span>
+            </button>
+
+            <button
+              onClick={() => {
+                setActiveSource('RESOURCES');
+                setSelectedStory(resourceItems[0]);
+              }}
+              className={`p-4 rounded-sm border text-left flex items-center justify-between transition-all ${
+                activeSource === 'RESOURCES'
+                  ? 'bg-[#CCFF00] text-black font-bold border-[#CCFF00] shadow-[0_0_15px_rgba(204,255,0,0.3)]'
+                  : 'bg-[#0B0B0B] border-white/10 text-neutral-300 hover:border-white/30'
+              }`}
+            >
+              <div className="flex items-center gap-2 text-xs font-mono uppercase">
+                <Wrench size={16} />
+                <span>🛠️ RESOURCES</span>
+              </div>
+              <span className="text-[10px] font-mono border px-2 py-0.5 rounded-sm">
+                {resourceItems.length}
+              </span>
+            </button>
+          </div>
+        </div>
+
+        {/* Story Selector Grid */}
         <div className="mb-10">
           <span className="text-xs font-mono font-bold text-neutral-400 uppercase block mb-4">
-            SELECT A LIVE STORY TO GENERATE INSTAGRAM POST & CAPTION FOR @THISISRAYU:
+            SELECT AN ITEM FROM {activeSource} TO GENERATE INSTAGRAM POST & CAPTION FOR @THISISRAYU:
           </span>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {OMNI_NEWS_DATA.map((item) => {
+            {currentItemsList.map((item) => {
               const isSelected = selectedStory.id === item.id;
               return (
                 <button
