@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import Image from 'next/image';
-import { Copy, Download, Check, Sparkles, Share2, LayoutGrid, AlertCircle, Quote, Cpu, Newspaper } from 'lucide-react';
+import { Copy, Download, Check, Sparkles, Share2, AlertCircle, Quote, Cpu, Newspaper, Loader2 } from 'lucide-react';
 import { OmniNewsItem } from '@/services/newsFetcher';
-import { INSTAGRAM_HANDLE, INSTAGRAM_URL } from '@/data/instagram';
+import { INSTAGRAM_HANDLE } from '@/data/instagram';
+import { toPng } from 'html-to-image';
 
 interface Props {
   newsItem: OmniNewsItem;
@@ -22,6 +22,7 @@ export const InstagramPostStudio: React.FC<Props> = ({ newsItem }) => {
   const [selectedTemplate, setSelectedTemplate] = useState('t1');
   const [copied, setCopied] = useState(false);
   const [published, setPublished] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const cardRef = useRef<HTMLDivElement | null>(null);
 
   // Generate Instagram Caption
@@ -54,12 +55,30 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
     setTimeout(() => setPublished(false), 3000);
   };
 
-  const handleDownloadCard = () => {
-    const link = document.createElement('a');
-    link.download = `rayu-template-${selectedTemplate}-${newsItem.id}.png`;
-    link.href = newsItem.imageUrl || 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=800&q=80';
-    link.target = '_blank';
-    link.click();
+  // High-Resolution 1080x1080 Design Export via html-to-image
+  const handleDownloadCard = async () => {
+    if (!cardRef.current) return;
+    setIsDownloading(true);
+    try {
+      const dataUrl = await toPng(cardRef.current, {
+        quality: 1.0,
+        pixelRatio: 3, // Ultra crisp high-definition export
+        cacheBust: true,
+      });
+      const link = document.createElement('a');
+      link.download = `rayu-post-${selectedTemplate}-${newsItem.id}.png`;
+      link.href = dataUrl;
+      link.click();
+    } catch (err) {
+      console.error('Failed to export post card image:', err);
+      // Fallback direct download link
+      const link = document.createElement('a');
+      link.download = `rayu-template-${selectedTemplate}-${newsItem.id}.png`;
+      link.href = newsItem.imageUrl || 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=800&q=80';
+      link.click();
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   return (
@@ -79,7 +98,7 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
         <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={handleCopyCaption}
-            className="inline-flex items-center gap-2 text-xs font-mono font-bold bg-[#050505] border border-white/15 px-4 py-2.5 rounded-sm hover:border-[#CCFF00] text-white hover:text-[#CCFF00] transition-colors uppercase"
+            className="inline-flex items-center gap-2 text-xs font-mono font-bold bg-[#050505] border border-white/15 px-4 py-2.5 rounded-sm hover:border-[#CCFF00] text-white hover:text-[#CCFF00] transition-colors uppercase cursor-pointer"
           >
             {copied ? <Check size={14} className="text-[#CCFF00]" /> : <Copy size={14} />}
             <span>{copied ? 'CAPTION COPIED!' : 'COPY CAPTION'}</span>
@@ -87,15 +106,16 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
 
           <button
             onClick={handleDownloadCard}
-            className="inline-flex items-center gap-2 text-xs font-mono font-bold bg-[#050505] border border-white/15 px-4 py-2.5 rounded-sm hover:border-[#CCFF00] text-white hover:text-[#CCFF00] transition-colors uppercase"
+            disabled={isDownloading}
+            className="inline-flex items-center gap-2 text-xs font-mono font-bold bg-[#050505] border border-white/15 px-4 py-2.5 rounded-sm hover:border-[#CCFF00] text-white hover:text-[#CCFF00] transition-colors uppercase cursor-pointer disabled:opacity-50"
           >
-            <Download size={14} />
-            <span>DOWNLOAD TEMPLATE</span>
+            {isDownloading ? <Loader2 size={14} className="animate-spin text-[#CCFF00]" /> : <Download size={14} />}
+            <span>{isDownloading ? 'EXPORTING 1080x1080 PNG...' : 'DOWNLOAD DESIGN PNG'}</span>
           </button>
 
           <button
             onClick={handlePublishSimulated}
-            className="cta-element btn-sweep inline-flex items-center gap-2 bg-[#CCFF00] text-[#050505] text-xs font-bold uppercase tracking-wider px-5 py-2.5 rounded-sm hover:bg-[#b5e600] transition-colors"
+            className="cta-element btn-sweep inline-flex items-center gap-2 bg-[#CCFF00] text-[#050505] text-xs font-bold uppercase tracking-wider px-5 py-2.5 rounded-sm hover:bg-[#b5e600] transition-colors cursor-pointer"
           >
             {published ? <Check size={14} /> : <Share2 size={14} />}
             <span>{published ? 'POSTED TO @THISISRAYU!' : 'PUBLISH TO INSTAGRAM'}</span>
@@ -116,7 +136,7 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
               <button
                 key={t.id}
                 onClick={() => setSelectedTemplate(t.id)}
-                className={`p-3 rounded-sm border text-left flex items-center gap-2 transition-all ${
+                className={`p-3 rounded-sm border text-left flex items-center gap-2 transition-all cursor-pointer ${
                   isSelected
                     ? 'bg-[#CCFF00]/10 border-[#CCFF00] text-[#CCFF00] shadow-[0_0_12px_rgba(204,255,0,0.2)] font-bold'
                     : 'bg-[#050505] border-white/10 text-neutral-400 hover:text-white'
@@ -141,12 +161,18 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
             ref={cardRef}
             className="relative aspect-square w-full bg-[#050505] border border-white/20 rounded-sm p-6 flex flex-col justify-between overflow-hidden shadow-2xl"
           >
+            {/* Background Cover Image with Overlay */}
+            {newsItem.imageUrl && (
+              <img
+                src={newsItem.imageUrl}
+                alt={newsItem.title}
+                className="absolute inset-0 w-full h-full object-cover opacity-25 pointer-events-none"
+              />
+            )}
+
             {/* TEMPLATE 1: KINETIC MINIMAL */}
             {selectedTemplate === 't1' && (
               <>
-                {newsItem.imageUrl && (
-                  <Image src={newsItem.imageUrl} alt={newsItem.title} fill className="object-cover opacity-25" />
-                )}
                 <div className="relative z-10 flex items-center justify-between border-b border-white/15 pb-4">
                   <div className="text-2xl font-black text-white">RAY<span className="text-[#CCFF00]">U.</span></div>
                   <div className="text-[10px] font-mono font-bold px-2.5 py-1 bg-[#CCFF00] text-black rounded-sm uppercase">[{newsItem.category}]</div>
@@ -191,7 +217,7 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
                 </div>
                 <div className="relative z-10 my-auto py-4">
                   <h4 className="text-2xl font-black text-white leading-tight uppercase mb-4 text-red-400">{newsItem.title}</h4>
-                  <div className="p-4 bg-red-950/30 border border-red-500/40 rounded-sm text-xs text-neutral-200 leading-relaxed font-mono">
+                  <div className="p-4 bg-red-950/40 border border-red-500/40 rounded-sm text-xs text-neutral-200 leading-relaxed font-mono">
                     {newsItem.summary}
                   </div>
                 </div>
