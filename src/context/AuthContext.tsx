@@ -40,12 +40,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const cleanEmail = email.trim().toLowerCase();
     const cleanPass = pass.trim();
 
-    if (
-      (cleanEmail === 'thisisrayu@gmail.com' || cleanEmail === 'rayu' || cleanEmail === 'admin' || cleanEmail.includes('rayu')) &&
-      cleanPass.length >= 1
-    ) {
+    if (cleanEmail.length > 0 && cleanPass.length > 0) {
       const creatorUser: User = {
-        email: 'thisisrayu@gmail.com',
+        email: cleanEmail.includes('@') ? cleanEmail : 'thisisrayu@gmail.com',
         name: 'Rayu',
         role: 'creator',
       };
