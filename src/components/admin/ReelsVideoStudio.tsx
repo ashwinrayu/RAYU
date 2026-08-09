@@ -219,7 +219,7 @@ export const ReelsVideoStudio: React.FC<Props> = ({ newsItem }) => {
 
             <div className="flex items-center justify-between text-[10px] font-mono font-bold text-neutral-300">
               <span className="text-[#CCFF00]">@{INSTAGRAM_HANDLE}</span>
-              <span>WWW.RAYU.COM</span>
+              <span>RAYU-360.VERCEL.APP</span>
             </div>
           </div>
         </div>

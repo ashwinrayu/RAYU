@@ -35,7 +35,7 @@ ${newsItem.summary}
 "${newsItem.rayuTakeaway || newsItem.summary}"`,
     `5/5 Read the full deep dive, primary sources, and live stream analysis at:
 
-🔗 https://rayu.com/news/${newsItem.id}
+🔗 https://rayu-360.vercel.app/news/${newsItem.id}
 
 Follow @${INSTAGRAM_HANDLE} for daily updates.`,
   ];

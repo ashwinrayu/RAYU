@@ -209,7 +209,7 @@ export const CarouselStudio: React.FC<Props> = ({ newsItem }) => {
                 </div>
               </div>
               <div className="relative z-10 pt-4 border-t border-white/20 flex items-center justify-between text-xs font-mono text-neutral-400">
-                <span className="text-[#CCFF00]">WWW.RAYU.COM</span>
+                <span className="text-[#CCFF00]">RAYU-360.VERCEL.APP</span>
                 <span>INSTAGRAM FEED</span>
               </div>
             </>

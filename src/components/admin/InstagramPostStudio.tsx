@@ -3,7 +3,7 @@
 import React, { useState, useRef } from 'react';
 import { Copy, Download, Check, Sparkles, Share2, AlertCircle, Quote, Cpu, Newspaper, Loader2, Film, Layers, MessageSquare, LayoutGrid } from 'lucide-react';
 import { OmniNewsItem } from '@/services/newsFetcher';
-import { INSTAGRAM_HANDLE } from '@/data/instagram';
+import { INSTAGRAM_HANDLE, WEBSITE_DOMAIN } from '@/data/instagram';
 import { toPng } from 'html-to-image';
 import { ReelsVideoStudio } from './ReelsVideoStudio';
 import { CarouselStudio } from './CarouselStudio';
@@ -43,7 +43,7 @@ ${newsItem.summary}
 💡 RAYU'S UNFILTERED TAKEAWAY:
 "${newsItem.rayuTakeaway || newsItem.summary}"
 
-🔗 Full analysis & primary sources live at www.rayu.com
+🔗 Full analysis & primary sources live at ${WEBSITE_DOMAIN}
 Link in bio 👉 @${INSTAGRAM_HANDLE}
 
 #RAYU #thisisrayu #IndiaTech #TechNews #GlobalShift #${newsItem.category} #${newsItem.region}`;
@@ -251,7 +251,7 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
                     </div>
                     <div className="relative z-10 pt-4 border-t border-white/15 flex items-center justify-between text-[10px] font-mono text-neutral-400">
                       <span className="text-[#CCFF00] font-bold">@THISISRAYU</span>
-                      <span>WWW.RAYU.COM</span>
+                      <span>RAYU-360.VERCEL.APP</span>
                     </div>
                   </>
                 )}
@@ -270,7 +270,7 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
                     </div>
                     <div className="relative z-10 pt-3 border-t border-white/20 flex items-center justify-between text-[10px] font-mono">
                       <span className="text-white font-bold">BY RAYU (@THISISRAYU)</span>
-                      <span className="text-[#CCFF00]">READ AT RAYU.COM</span>
+                      <span className="text-[#CCFF00]">READ AT RAYU-360.VERCEL.APP</span>
                     </div>
                   </>
                 )}
@@ -339,7 +339,7 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
                     </div>
                     <div className="relative z-10 pt-3 border-t border-white/10 flex items-center justify-between text-[10px] font-mono text-neutral-500">
                       <span>UNFILTERED PERSPECTIVE</span>
-                      <span className="text-[#FFB800]">WWW.RAYU.COM</span>
+                      <span className="text-[#FFB800]">RAYU-360.VERCEL.APP</span>
                     </div>
                   </>
                 )}

@@ -12,6 +12,8 @@ export interface InstagramPost {
 export const INSTAGRAM_HANDLE = 'thisisrayu';
 export const INSTAGRAM_URL = 'https://www.instagram.com/thisisrayu/';
 export const CONTACT_EMAIL = 'thisisrayu@gmail.com';
+export const WEBSITE_DOMAIN = 'rayu-360.vercel.app';
+export const WEBSITE_URL = 'https://rayu-360.vercel.app';
 
 export const INSTAGRAM_POSTS: InstagramPost[] = [
   {
@@ -25,7 +27,7 @@ export const INSTAGRAM_POSTS: InstagramPost[] = [
     permalink: INSTAGRAM_URL,
   },
   {
-    id: 'ig-[#2]',
+    id: 'ig-2',
     type: 'POST',
     caption: 'The Dark Forest Web: Why the best conversations are moving out of public algorithmic feeds and into private micro-communities.',
     imageUrl: 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?auto=format&fit=crop&w=800&q=80',
