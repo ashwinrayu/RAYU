@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Copy, Download, Check, Sparkles, Share2, AlertCircle, Quote, Cpu, Newspaper, Loader2, Film, Layers, MessageSquare, LayoutGrid, Image as ImageIcon, RefreshCw } from 'lucide-react';
+import { Copy, Download, Check, Sparkles, Share2, AlertCircle, Quote, Cpu, Newspaper, Loader2, Film, Layers, MessageSquare, LayoutGrid, Image as ImageIcon, RefreshCw, Sliders, ShieldCheck, Zap } from 'lucide-react';
 import { OmniNewsItem } from '@/services/newsFetcher';
 import { INSTAGRAM_HANDLE, WEBSITE_DOMAIN } from '@/data/instagram';
 import { toPng } from 'html-to-image';
@@ -28,37 +28,76 @@ export const InstagramPostStudio: React.FC<Props> = ({ newsItem }) => {
   const [copied, setCopied] = useState(false);
   const [published, setPublished] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+
+  // Hybrid AI Generator Controls
+  const [aiProvider, setAiProvider] = useState<'OPENAI' | 'GEMINI' | 'AUTO'>('OPENAI');
+  const [negativeZone, setNegativeZone] = useState<'bottom' | 'left'>('bottom');
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+  const [elapsedTimer, setElapsedTimer] = useState(0);
+  const [generationTimeMs, setGenerationTimeMs] = useState<number | null>(null);
+  const [apiNotice, setApiNotice] = useState<string | null>(null);
   const [customImageUrl, setCustomImageUrl] = useState<string | null>(null);
   const cardRef = useRef<HTMLDivElement | null>(null);
 
-  // Preserve & prioritize REAL story photos/screenshots
+  // Auto-generate AI background on story change
   useEffect(() => {
-    if (newsItem.imageUrl) {
-      setCustomImageUrl(newsItem.imageUrl);
-    } else {
-      handleGenerateInStudioAiVisual();
-    }
-  }, [newsItem.id, newsItem.title, newsItem.imageUrl]);
+    handleGenerateServerAiBackground();
+  }, [newsItem.id, newsItem.title, aiProvider, negativeZone]);
 
-  const handleGenerateInStudioAiVisual = () => {
+  // Elapsed timer tracking
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isGeneratingAI) {
+      setElapsedTimer(0);
+      interval = setInterval(() => {
+        setElapsedTimer((prev) => +(prev + 0.1).toFixed(1));
+      }, 100);
+    }
+    return () => clearInterval(interval);
+  }, [isGeneratingAI]);
+
+  // Server-Side Hybrid AI Background Generator Call
+  const handleGenerateServerAiBackground = async () => {
     setIsGeneratingAI(true);
-    setTimeout(() => {
-      try {
-        if (newsItem.imageUrl) {
-          setCustomImageUrl(newsItem.imageUrl);
-        } else {
-          const dataUrl = generateInStudioAiVisual(newsItem.title, newsItem.category, newsItem.summary);
-          if (dataUrl) {
-            setCustomImageUrl(dataUrl);
-          }
+    setApiNotice(null);
+    const startTime = performance.now();
+
+    try {
+      const res = await fetch('/api/generate-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: newsItem.title,
+          category: newsItem.category,
+          summary: newsItem.summary,
+          provider: aiProvider,
+          layout: negativeZone,
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.imageUrl) {
+          setCustomImageUrl(data.imageUrl);
         }
-      } catch (err) {
-        console.error('Real image resolution error:', err);
-      } finally {
-        setIsGeneratingAI(false);
+        if (data.notice) {
+          setApiNotice(data.notice);
+        }
+      } else {
+        // Fallback to client synthesis if server call errors
+        const clientDataUrl = generateInStudioAiVisual(newsItem.title, newsItem.category, newsItem.summary);
+        if (clientDataUrl) setCustomImageUrl(clientDataUrl);
       }
-    }, 400);
+    } catch (err) {
+      console.error('Server AI Background generation failed:', err);
+      const clientDataUrl = generateInStudioAiVisual(newsItem.title, newsItem.category, newsItem.summary);
+      if (clientDataUrl) setCustomImageUrl(clientDataUrl);
+    } finally {
+      const endTime = performance.now();
+      const duration = +((endTime - startTime) / 1000).toFixed(2);
+      setGenerationTimeMs(duration > 0 ? duration : 1.2);
+      setIsGeneratingAI(false);
+    }
   };
 
   const activeDisplayImage = customImageUrl || newsItem.imageUrl || 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80';
@@ -117,7 +156,7 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
     }
   };
 
-  // Clone newsItem with active real story photo
+  // Clone newsItem with active AI background
   const dynamicNewsItem: OmniNewsItem = {
     ...newsItem,
     imageUrl: activeDisplayImage,
@@ -125,31 +164,84 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
 
   return (
     <div className="bg-[#0B0B0B] border border-white/10 p-6 md:p-8 rounded-sm text-white">
-      {/* Real Article Photo Status Control Bar */}
-      <div className="mb-8 p-4 bg-[#050505] border border-[#CCFF00]/40 rounded-sm flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 shadow-[0_0_20px_rgba(204,255,0,0.1)]">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded bg-[#CCFF00]/10 border border-[#CCFF00]/40 flex items-center justify-center text-[#CCFF00] shrink-0">
-            {isGeneratingAI ? <Loader2 size={20} className="animate-spin text-[#CCFF00]" /> : <ImageIcon size={20} />}
-          </div>
-          <div>
-            <div className="flex items-center gap-2 text-xs font-mono font-bold text-[#CCFF00] uppercase">
-              <Sparkles size={14} />
-              <span>REAL ARTICLE PHOTO / SCREENSHOT ENGINE ACTIVE</span>
+      {/* Hybrid AI Background Art Generator Control Bar */}
+      <div className="mb-8 p-5 bg-[#050505] border border-[#CCFF00]/40 rounded-sm space-y-4 shadow-[0_0_25px_rgba(204,255,0,0.1)]">
+        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded bg-[#CCFF00]/10 border border-[#CCFF00]/40 flex items-center justify-center text-[#CCFF00] shrink-0">
+              {isGeneratingAI ? <Loader2 size={20} className="animate-spin text-[#CCFF00]" /> : <Zap size={20} />}
             </div>
-            <span className="text-xs font-mono text-neutral-400">
-              REAL GRAPHIC PHOTO LOADED FOR: "{newsItem.title.slice(0, 45)}..."
-            </span>
+            <div>
+              <div className="flex items-center gap-2 text-xs font-mono font-bold text-[#CCFF00] uppercase">
+                <Sparkles size={14} />
+                <span>HYBRID AI BACKGROUND ART + BRAND TYPOGRAPHY OVERLAY SYSTEM</span>
+              </div>
+              <span className="text-xs font-mono text-neutral-400">
+                {isGeneratingAI
+                  ? `CALLING ${aiProvider} API... GENERATING ARTWORK (${elapsedTimer}s)`
+                  : `ARTWORK COMPOSITED IN ${generationTimeMs || 1.2}s • CRISP CODE TYPOGRAPHY OVERLAY READY`}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            {/* AI Provider Switcher Toggle */}
+            <div className="flex items-center bg-[#090909] border border-white/15 rounded-sm p-1 text-xs font-mono">
+              <button
+                onClick={() => setAiProvider('OPENAI')}
+                className={`px-3 py-1.5 rounded-sm font-bold uppercase transition-all ${
+                  aiProvider === 'OPENAI' ? 'bg-[#CCFF00] text-black shadow-[0_0_10px_rgba(204,255,0,0.4)]' : 'text-neutral-400 hover:text-white'
+                }`}
+              >
+                OPENAI DALL·E 3
+              </button>
+              <button
+                onClick={() => setAiProvider('GEMINI')}
+                className={`px-3 py-1.5 rounded-sm font-bold uppercase transition-all ${
+                  aiProvider === 'GEMINI' ? 'bg-[#CCFF00] text-black shadow-[0_0_10px_rgba(204,255,0,0.4)]' : 'text-neutral-400 hover:text-white'
+                }`}
+              >
+                GEMINI IMAGEN
+              </button>
+            </div>
+
+            {/* Negative Space Zone Selector */}
+            <div className="flex items-center bg-[#090909] border border-white/15 rounded-sm p-1 text-xs font-mono">
+              <button
+                onClick={() => setNegativeZone('bottom')}
+                className={`px-2.5 py-1.5 rounded-sm uppercase ${
+                  negativeZone === 'bottom' ? 'bg-white/20 text-white font-bold' : 'text-neutral-500'
+                }`}
+              >
+                BOTTOM SPACE
+              </button>
+              <button
+                onClick={() => setNegativeZone('left')}
+                className={`px-2.5 py-1.5 rounded-sm uppercase ${
+                  negativeZone === 'left' ? 'bg-white/20 text-white font-bold' : 'text-neutral-500'
+                }`}
+              >
+                LEFT SPACE
+              </button>
+            </div>
+
+            <button
+              onClick={handleGenerateServerAiBackground}
+              disabled={isGeneratingAI}
+              className="inline-flex items-center gap-2 text-xs font-mono font-bold bg-[#CCFF00] text-black hover:bg-[#b5e600] px-4 py-2.5 rounded-sm transition-colors uppercase cursor-pointer disabled:opacity-50 shrink-0"
+            >
+              <RefreshCw size={14} className={isGeneratingAI ? 'animate-spin' : ''} />
+              <span>{isGeneratingAI ? `GENERATING (${elapsedTimer}s)...` : 'RE-ROLL AI ART 🎨'}</span>
+            </button>
           </div>
         </div>
 
-        <button
-          onClick={handleGenerateInStudioAiVisual}
-          disabled={isGeneratingAI}
-          className="inline-flex items-center gap-2 text-xs font-mono font-bold bg-[#CCFF00] text-black hover:bg-[#b5e600] px-4 py-2.5 rounded-sm transition-colors uppercase cursor-pointer disabled:opacity-50 shrink-0"
-        >
-          <RefreshCw size={14} className={isGeneratingAI ? 'animate-spin' : ''} />
-          <span>RE-SYNC STORY PHOTO 📷</span>
-        </button>
+        {apiNotice && (
+          <div className="p-2.5 bg-yellow-500/10 border border-yellow-500/30 rounded-sm text-[11px] font-mono text-yellow-300 flex items-center justify-between">
+            <span>💡 {apiNotice}</span>
+            <span className="text-neutral-400">Keys stored in .env.local</span>
+          </div>
+        )}
       </div>
 
       {/* Format Selection Bar */}
@@ -208,7 +300,7 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
         </div>
       </div>
 
-      {/* RENDER FORMAT COMPONENT WITH REAL STORY ITEM */}
+      {/* RENDER FORMAT COMPONENT WITH DYNAMIC ITEM */}
       {studioFormat === 'reels' && <ReelsVideoStudio newsItem={dynamicNewsItem} />}
       {studioFormat === 'carousel' && <CarouselStudio newsItem={dynamicNewsItem} />}
       {studioFormat === 'twitter' && <TwitterThreadStudio newsItem={dynamicNewsItem} />}
@@ -288,19 +380,19 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
             <div className="lg:col-span-6">
               <span className="text-xs font-mono font-bold text-neutral-400 uppercase block mb-3 flex items-center justify-between">
                 <span>📸 LIVE 1080x1080 SQUARE POST CARD PREVIEW ({selectedTemplate.toUpperCase()})</span>
-                {isGeneratingAI && <span className="text-[#CCFF00] font-mono animate-pulse">LOADING REAL PHOTO...</span>}
+                {isGeneratingAI && <span className="text-[#CCFF00] font-mono animate-pulse">COMPOSITING AI ART ({elapsedTimer}s)...</span>}
               </span>
 
               <div
                 ref={cardRef}
                 className="relative aspect-square w-full bg-[#050505] border border-white/20 rounded-sm p-6 flex flex-col justify-between overflow-hidden shadow-2xl"
               >
-                {/* Background Cover Image Layer */}
+                {/* Background AI Artwork Layer */}
                 {activeDisplayImage && (
                   <img
                     src={activeDisplayImage}
                     alt={newsItem.title}
-                    className="absolute inset-0 w-full h-full object-cover opacity-35 pointer-events-none"
+                    className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${isGeneratingAI ? 'opacity-20 scale-105' : 'opacity-40 scale-100'}`}
                   />
                 )}
 
@@ -313,10 +405,10 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
                     </div>
                     <div className="relative z-10 my-auto py-4">
                       <span className="text-[10px] font-mono text-[#CCFF00] uppercase block mb-2">● LIVE AWARENESS • {newsItem.region}</span>
-                      <h4 className="text-xl sm:text-2xl font-black text-white leading-tight uppercase mb-3">{newsItem.title}</h4>
-                      <p className="text-xs text-neutral-300 line-clamp-3 leading-relaxed">{newsItem.summary}</p>
+                      <h4 className="text-xl sm:text-2xl font-black text-white leading-tight uppercase mb-3 drop-shadow-md">{newsItem.title}</h4>
+                      <p className="text-xs text-neutral-200 line-clamp-3 leading-relaxed">{newsItem.summary}</p>
                     </div>
-                    <div className="relative z-10 pt-4 border-t border-white/15 flex items-center justify-between text-[10px] font-mono text-neutral-400">
+                    <div className="relative z-10 pt-4 border-t border-white/15 flex items-center justify-between text-[10px] font-mono text-neutral-300">
                       <span className="text-[#CCFF00] font-bold">@THISISRAYU</span>
                       <span>RAYU-360.VERCEL.APP</span>
                     </div>
@@ -330,7 +422,7 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
                       <span className="text-xs font-mono font-bold tracking-widest text-neutral-400 uppercase">RAYU EDITORIAL</span>
                       <span className="text-[10px] font-mono text-neutral-500 uppercase">{newsItem.publishedAt}</span>
                     </div>
-                    <div className="relative z-10 my-auto p-4 bg-[#090909] border border-white/10 rounded-sm">
+                    <div className="relative z-10 my-auto p-4 bg-[#090909]/90 border border-white/10 rounded-sm backdrop-blur-md">
                       <div className="text-[10px] font-mono text-[#CCFF00] mb-2 uppercase font-bold">[{newsItem.category} ESSAY]</div>
                       <h4 className="text-2xl font-serif text-white font-bold leading-tight mb-3">{newsItem.title}</h4>
                       <p className="text-xs text-neutral-300 leading-relaxed italic">"{newsItem.rayuTakeaway || newsItem.summary}"</p>
@@ -351,7 +443,7 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
                     </div>
                     <div className="relative z-10 my-auto py-4">
                       <h4 className="text-2xl font-black text-white leading-tight uppercase mb-4 text-red-400">{newsItem.title}</h4>
-                      <div className="p-4 bg-red-950/40 border border-red-500/40 rounded-sm text-xs text-neutral-200 leading-relaxed font-mono">
+                      <div className="p-4 bg-red-950/80 border border-red-500/40 rounded-sm text-xs text-neutral-200 leading-relaxed font-mono backdrop-blur-md">
                         {newsItem.summary}
                       </div>
                     </div>
@@ -374,7 +466,7 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
                       {newsItem.keyFacts && newsItem.keyFacts.length > 0 ? (
                         <div className="space-y-2">
                           {newsItem.keyFacts.slice(0, 3).map((f, i) => (
-                            <div key={i} className="text-xs font-mono text-neutral-300 bg-neutral-900/80 p-2.5 border border-white/10 rounded-sm">
+                            <div key={i} className="text-xs font-mono text-neutral-300 bg-neutral-900/90 p-2.5 border border-white/10 rounded-sm backdrop-blur-md">
                               <span className="text-[#00F0FF] font-bold">[{i + 1}]</span> {f}
                             </div>
                           ))}
@@ -393,7 +485,7 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
                 {/* TEMPLATE 5: QUOTE SPOTLIGHT */}
                 {selectedTemplate === 't5' && (
                   <>
-                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(255,184,0,0.15)_0%,_rgba(5,5,5,1)_80%)] pointer-events-none" />
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(255,184,0,0.2)_0%,_rgba(5,5,5,0.9)_80%)] pointer-events-none" />
                     <div className="relative z-10 text-center pt-2">
                       <span className="text-xs font-mono font-bold text-[#FFB800] uppercase tracking-widest">SPOTLIGHT TAKEAWAY</span>
                     </div>

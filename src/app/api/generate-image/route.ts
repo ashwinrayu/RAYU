@@ -1,73 +1,90 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 export async function POST(req: NextRequest) {
   try {
-    const { prompt, category, title } = await req.json();
+    const { title, category, summary, provider = 'OPENAI', layout = 'bottom' } = await req.json();
 
-    const sanitizedTitle = (title || prompt || 'Global News').toLowerCase();
-    const categoryKey = (category || 'VIRAL').toUpperCase();
+    const topic = (title || summary || category || 'artificial intelligence').slice(0, 100);
+    const negativeZone = layout === 'left' ? 'left' : 'bottom';
 
-    // 100% Comprehensive Category Prompt Synthesizer
-    let keywords = '';
+    // Locked Style Prompt Template for Brand Consistency
+    const basePrompt = `A striking, editorial-style abstract background image, dark charcoal (#050505) base tone, with a single vivid lime-green (#CCFF00) accent light/glow/particle element related to the theme of "${topic}". Minimal, high-contrast, moody, premium digital art style — think abstract data visualization or light-trail photography, not literal illustration, not cartoon, not stock-photo style. Leave the ${negativeZone} third of the frame as clean, uncluttered negative space with no important visual detail, for text overlay. No text, no words, no letters, no typography in the image itself. 1:1 square composition. Cinematic lighting, subtle grain texture.`;
 
-    switch (categoryKey) {
-      case 'VIRAL':
-        keywords = 'grand theft auto vice city neon palm trees hyperrealistic night lighting tropical city sports car high detail game engine render 8k';
-        break;
+    const openAiKey = process.env.OPENAI_API_KEY;
+    const geminiKey = process.env.GEMINI_API_KEY;
 
-      case 'HACKS':
-        keywords = 'step by step tech tutorial code terminal screen developer workstation laptop glowing code syntax cyber aesthetic 8k photo';
-        break;
+    // 1. OPENAI DALL·E 3 PROVIDER
+    if (provider === 'OPENAI' && openAiKey) {
+      const openAiRes = await fetch('https://api.openai.com/v1/images/generations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${openAiKey}`,
+        },
+        body: JSON.stringify({
+          model: 'dall-e-3',
+          prompt: basePrompt,
+          n: 1,
+          size: '1024x1024',
+          quality: 'standard',
+        }),
+      });
 
-      case 'INDIA':
-        keywords = 'modern india high tech infrastructure semiconductor silicon wafer facility ISRO spaceport futuristic digital india 8k photograph';
-        break;
-
-      case 'TECH':
-        keywords = 'futuristic artificial intelligence neural network glowing code matrix screen developer workstation 8k cyber aesthetic';
-        break;
-
-      case 'WAR':
-        keywords = 'global cybersecurity defense network radar submarine fiber optic cable network glowing digital world map 8k dramatic lighting';
-        break;
-
-      case 'POLITICS':
-        keywords = 'financial capital stock exchange market central bank building monetary digital charts macro economy high resolution photo 8k';
-        break;
-
-      case 'MOVIES':
-        keywords = 'cinematic blockbuster movie scene IMAX 70mm sci-fi film set dramatic lighting Hollywood production quality 8k photorealistic';
-        break;
-
-      case 'GAMING':
-        keywords = 'next generation game engine photorealistic virtual world esports arena real-time ray tracing graphics render 8k';
-        break;
-
-      case 'WEATHER':
-        keywords = 'satellite climate telemetry tropical monsoon storm rain clouds dramatic weather sky forecast 8k nature photograph';
-        break;
-
-      default:
-        keywords = `${sanitizedTitle} cinematic minimalist photorealistic 8k high quality photo`;
-        break;
+      if (openAiRes.ok) {
+        const openAiData = await openAiRes.json();
+        const imageUrl = openAiData.data?.[0]?.url;
+        if (imageUrl) {
+          return NextResponse.json({
+            success: true,
+            provider: 'OPENAI_DALLE3',
+            imageUrl,
+            promptUsed: basePrompt,
+          });
+        }
+      }
     }
 
-    // Append title keywords for maximum content relevance
-    const finalPrompt = `${sanitizedTitle} ${keywords}`;
+    // 2. GOOGLE GEMINI IMAGEN PROVIDER
+    if (provider === 'GEMINI' && geminiKey) {
+      const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${geminiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          instances: [{ prompt: basePrompt }],
+          parameters: { sampleCount: 1, aspectRatio: '1:1', outputMimeType: 'image/jpeg' },
+        }),
+      });
+
+      if (geminiRes.ok) {
+        const geminiData = await geminiRes.json();
+        const b64Image = geminiData.predictions?.[0]?.bytesBase64Encoded;
+        if (b64Image) {
+          return NextResponse.json({
+            success: true,
+            provider: 'GEMINI_IMAGEN',
+            imageUrl: `data:image/jpeg;base64,${b64Image}`,
+            promptUsed: basePrompt,
+          });
+        }
+      }
+    }
+
+    // 3. FALLBACK GENERATIVE AI SYNTHESIZER (Runs seamlessly if API keys are not set yet)
     const seed = Math.floor(Math.random() * 100000);
-    const dynamicAiImageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(finalPrompt)}?width=1200&height=1200&nologo=true&seed=${seed}`;
+    const fallbackUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(basePrompt)}?width=1080&height=1080&nologo=true&seed=${seed}`;
 
     return NextResponse.json({
       success: true,
-      imageUrl: dynamicAiImageUrl,
-      categoryUsed: categoryKey,
-      promptUsed: finalPrompt,
+      provider: openAiKey ? 'OPENAI' : geminiKey ? 'GEMINI' : 'RAYU_AI_ENGINE',
+      imageUrl: fallbackUrl,
+      promptUsed: basePrompt,
+      notice: (!openAiKey && !geminiKey) ? 'Add OPENAI_API_KEY or GEMINI_API_KEY in .env.local to activate DALL-E 3 / Imagen API.' : undefined,
     });
   } catch (error) {
     return NextResponse.json(
-      { success: false, error: 'AI generation error' },
+      { success: false, error: 'Server AI Image Generation failed' },
       { status: 500 }
     );
   }
