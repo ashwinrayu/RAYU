@@ -56,10 +56,36 @@ export const InstagramPostStudio: React.FC<Props> = ({ newsItem }) => {
   const [manualUrlInput, setManualUrlInput] = useState('');
   const cardRef = useRef<HTMLDivElement | null>(null);
 
-  // Sync custom image when newsItem changes
+  // Sync custom image when newsItem changes and auto-trigger AI image generator
   useEffect(() => {
-    setCustomImageUrl(newsItem.imageUrl || null);
+    if (newsItem.imageUrl) {
+      setCustomImageUrl(newsItem.imageUrl);
+    } else {
+      handleAutoGenerateAI();
+    }
   }, [newsItem]);
+
+  const handleAutoGenerateAI = async () => {
+    try {
+      const res = await fetch('/api/generate-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: newsItem.title,
+          category: newsItem.category,
+          prompt: newsItem.summary,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.imageUrl) {
+          setCustomImageUrl(data.imageUrl);
+        }
+      }
+    } catch (err) {
+      console.error('Auto AI image generation failed:', err);
+    }
+  };
 
   const activeDisplayImage = customImageUrl || newsItem.imageUrl || 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80';
 
