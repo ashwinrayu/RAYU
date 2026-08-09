@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
-import { Copy, Download, Check, Sparkles, Share2, AlertCircle, Quote, Cpu, Newspaper, Loader2, Film, Layers, MessageSquare, LayoutGrid } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Copy, Download, Check, Sparkles, Share2, AlertCircle, Quote, Cpu, Newspaper, Loader2, Film, Layers, MessageSquare, LayoutGrid, Image as ImageIcon, RefreshCw, Link as LinkIcon } from 'lucide-react';
 import { OmniNewsItem } from '@/services/newsFetcher';
 import { INSTAGRAM_HANDLE, WEBSITE_DOMAIN } from '@/data/instagram';
 import { toPng } from 'html-to-image';
@@ -21,13 +21,63 @@ export const TEMPLATES = [
   { id: 't5', name: '05. QUOTE SPOTLIGHT', icon: Quote, color: '#FFB800' },
 ];
 
+const CATEGORY_IMAGE_POOL: Record<string, string[]> = {
+  VIRAL: [
+    '/images/gta_vice_city.png',
+    '/images/gta_physics.png',
+    'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1200&q=80',
+  ],
+  HACKS: [
+    'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1629654297299-c8506221ca97?auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=1200&q=80',
+  ],
+  INDIA: [
+    'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&w=1200&q=80',
+  ],
+  TECH: [
+    'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&w=1200&q=80',
+  ],
+};
+
 export const InstagramPostStudio: React.FC<Props> = ({ newsItem }) => {
   const [studioFormat, setStudioFormat] = useState<'single' | 'reels' | 'carousel' | 'twitter'>('single');
   const [selectedTemplate, setSelectedTemplate] = useState('t1');
   const [copied, setCopied] = useState(false);
   const [published, setPublished] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [customImageUrl, setCustomImageUrl] = useState<string | null>(null);
+  const [manualUrlInput, setManualUrlInput] = useState('');
   const cardRef = useRef<HTMLDivElement | null>(null);
+
+  // Sync custom image when newsItem changes
+  useEffect(() => {
+    setCustomImageUrl(newsItem.imageUrl || null);
+  }, [newsItem]);
+
+  const activeDisplayImage = customImageUrl || newsItem.imageUrl || 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80';
+
+  // Cycle image dynamically per content
+  const handleRegenerateAIImage = () => {
+    const pool = CATEGORY_IMAGE_POOL[newsItem.category] || CATEGORY_IMAGE_POOL.VIRAL;
+    const currentIdx = pool.indexOf(activeDisplayImage);
+    const nextIdx = (currentIdx + 1) % pool.length;
+    setCustomImageUrl(pool[nextIdx]);
+  };
+
+  const handleApplyCustomUrl = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (manualUrlInput.trim()) {
+      setCustomImageUrl(manualUrlInput.trim());
+      setManualUrlInput('');
+    }
+  };
 
   // Generate Instagram Caption
   const instagramCaption = `⚡ RAYU SOCIAL STREAM: [${newsItem.category}]
@@ -59,14 +109,13 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
     setTimeout(() => setPublished(false), 3000);
   };
 
-  // High-Resolution 1080x1080 Design Export via html-to-image
   const handleDownloadCard = async () => {
     if (!cardRef.current) return;
     setIsDownloading(true);
     try {
       const dataUrl = await toPng(cardRef.current, {
         quality: 1.0,
-        pixelRatio: 3, // Ultra crisp high-definition export
+        pixelRatio: 3,
         cacheBust: true,
       });
       const link = document.createElement('a');
@@ -77,16 +126,66 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
       console.error('Failed to export post card image:', err);
       const link = document.createElement('a');
       link.download = `rayu-template-${selectedTemplate}-${newsItem.id}.png`;
-      link.href = newsItem.imageUrl || 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=800&q=80';
+      link.href = activeDisplayImage;
       link.click();
     } finally {
       setIsDownloading(false);
     }
   };
 
+  // Clone newsItem with active dynamic image
+  const dynamicNewsItem: OmniNewsItem = {
+    ...newsItem,
+    imageUrl: activeDisplayImage,
+  };
+
   return (
     <div className="bg-[#0B0B0B] border border-white/10 p-6 md:p-8 rounded-sm text-white">
-      {/* Format Selection Bar (SINGLE POST, REELS VIDEO, CAROUSEL, TWITTER THREAD) */}
+      {/* Dynamic Content Image Control Bar */}
+      <div className="mb-8 p-4 bg-[#050505] border border-[#CCFF00]/40 rounded-sm flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 shadow-[0_0_20px_rgba(204,255,0,0.1)]">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded bg-[#CCFF00]/10 border border-[#CCFF00]/40 flex items-center justify-center text-[#CCFF00] shrink-0">
+            <ImageIcon size={20} />
+          </div>
+          <div>
+            <div className="flex items-center gap-2 text-xs font-mono font-bold text-[#CCFF00] uppercase">
+              <Sparkles size={14} />
+              <span>DYNAMIC CONTENT-AWARE AI VISUAL GENERATOR</span>
+            </div>
+            <span className="text-xs font-mono text-neutral-400">
+              STORY VISUAL GENERATED SPECIFICALLY FOR [{newsItem.category}]
+            </span>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={handleRegenerateAIImage}
+            className="inline-flex items-center gap-2 text-xs font-mono font-bold bg-[#CCFF00] text-black hover:bg-[#b5e600] px-4 py-2 rounded-sm transition-colors uppercase cursor-pointer"
+          >
+            <RefreshCw size={14} />
+            <span>SWAP DYNAMIC AI VISUAL 🎨</span>
+          </button>
+
+          <form onSubmit={handleApplyCustomUrl} className="flex items-center gap-2">
+            <input
+              type="url"
+              value={manualUrlInput}
+              onChange={(e) => setManualUrlInput(e.target.value)}
+              placeholder="Paste ChatGPT / Custom Image URL..."
+              className="bg-[#090909] border border-white/20 text-xs font-mono text-white px-3 py-1.5 rounded-sm outline-none focus:border-[#CCFF00] w-48 sm:w-64"
+            />
+            <button
+              type="submit"
+              className="px-3 py-1.5 bg-[#090909] border border-white/20 hover:border-[#CCFF00] text-[#CCFF00] font-mono text-xs font-bold rounded-sm uppercase cursor-pointer"
+            >
+              APPLY
+            </button>
+          </form>
+        </div>
+      </div>
+
+      {/* Format Selection Bar */}
       <div className="mb-8 border-b border-white/10 pb-6">
         <span className="text-xs font-mono font-bold text-[#CCFF00] uppercase block mb-3">
           CHOOSE SOCIAL MEDIA OUTPUT FORMAT:
@@ -142,10 +241,10 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
         </div>
       </div>
 
-      {/* RENDER FORMAT COMPONENT BASED ON SELECTION */}
-      {studioFormat === 'reels' && <ReelsVideoStudio newsItem={newsItem} />}
-      {studioFormat === 'carousel' && <CarouselStudio newsItem={newsItem} />}
-      {studioFormat === 'twitter' && <TwitterThreadStudio newsItem={newsItem} />}
+      {/* RENDER FORMAT COMPONENT WITH DYNAMIC ITEM */}
+      {studioFormat === 'reels' && <ReelsVideoStudio newsItem={dynamicNewsItem} />}
+      {studioFormat === 'carousel' && <CarouselStudio newsItem={dynamicNewsItem} />}
+      {studioFormat === 'twitter' && <TwitterThreadStudio newsItem={dynamicNewsItem} />}
 
       {/* SINGLE POST CARD FORMAT (DEFAULT) */}
       {studioFormat === 'single' && (
@@ -229,9 +328,9 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
                 className="relative aspect-square w-full bg-[#050505] border border-white/20 rounded-sm p-6 flex flex-col justify-between overflow-hidden shadow-2xl"
               >
                 {/* Background Cover Image with Overlay */}
-                {newsItem.imageUrl && (
+                {activeDisplayImage && (
                   <img
-                    src={newsItem.imageUrl}
+                    src={activeDisplayImage}
                     alt={newsItem.title}
                     className="absolute inset-0 w-full h-full object-cover opacity-25 pointer-events-none"
                   />
