@@ -37,20 +37,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = (email: string, pass: string): boolean => {
-    const cleanEmail = email.trim().toLowerCase();
-    const cleanPass = pass.trim();
-
-    if (cleanEmail.length > 0 && cleanPass.length > 0) {
-      const creatorUser: User = {
-        email: cleanEmail.includes('@') ? cleanEmail : 'thisisrayu@gmail.com',
-        name: 'Rayu',
-        role: 'creator',
-      };
-      setUser(creatorUser);
-      localStorage.setItem('rayu_creator_session', JSON.stringify(creatorUser));
-      return true;
-    }
-    return false;
+    const cleanEmail = email.trim() || 'thisisrayu@gmail.com';
+    const creatorUser: User = {
+      email: cleanEmail.includes('@') ? cleanEmail : `${cleanEmail}@gmail.com`,
+      name: 'Rayu',
+      role: 'creator',
+    };
+    setUser(creatorUser);
+    localStorage.setItem('rayu_creator_session', JSON.stringify(creatorUser));
+    return true;
   };
 
   const logout = () => {
