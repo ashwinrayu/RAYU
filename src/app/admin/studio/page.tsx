@@ -34,12 +34,9 @@ export default function AdminStudioPage() {
             <Lock size={28} />
           </div>
 
-          <h1 className="text-3xl font-black uppercase tracking-tight mb-2">
+          <h1 className="text-3xl font-black uppercase tracking-tight mb-8">
             CREATOR ACCESS <span className="text-[#CCFF00]">REQUIRED</span>
           </h1>
-          <p className="text-xs font-mono text-neutral-400 mb-8">
-            Log in with your creator account ({CONTACT_EMAIL}) to unlock the Instagram Post Studio & Cross-Publisher.
-          </p>
 
           <div className="bg-[#0B0B0B] border border-white/10 p-8 rounded-sm text-left shadow-2xl relative overflow-hidden">
             {/* Ambient Glow */}
