@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
-import { Radio, ArrowRight, RefreshCw, Sparkles, AlertTriangle, Film, Gamepad2, CloudSun, Landmark, Cpu, Globe, Maximize2, ChevronRight } from 'lucide-react';
-import { OMNI_NEWS_DATA } from '@/services/newsFetcher';
+import { Radio, ArrowRight, Sparkles, AlertTriangle, Film, Gamepad2, CloudSun, Landmark, Cpu, Globe, Maximize2, ChevronRight, Clock } from 'lucide-react';
+import { OMNI_NEWS_DATA, OmniNewsItem } from '@/services/newsFetcher';
 
 const CATEGORY_TABS = [
   { key: 'ALL', label: 'ALL UPDATES', icon: Sparkles },
@@ -20,17 +20,32 @@ const CATEGORY_TABS = [
 
 export const LiveNewsFeed: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState('ALL');
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [newsStream, setNewsStream] = useState<OmniNewsItem[]>(OMNI_NEWS_DATA);
+
+  // Automatic background refresh every 5 minutes (300,000 ms)
+  useEffect(() => {
+    const fetchLatest = async () => {
+      try {
+        const res = await fetch('/api/news');
+        if (res.ok) {
+          const json = await res.json();
+          if (json.items && json.items.length > 0) {
+            setNewsStream(json.items);
+          }
+        }
+      } catch {
+        // Retain current stream on error
+      }
+    };
+
+    const interval = setInterval(fetchLatest, 300000); // 5 minutes
+    return () => clearInterval(interval);
+  }, []);
 
   const filteredItems = useMemo(() => {
-    if (selectedCategory === 'ALL') return OMNI_NEWS_DATA;
-    return OMNI_NEWS_DATA.filter((item) => item.category === selectedCategory);
-  }, [selectedCategory]);
-
-  const handleRefresh = () => {
-    setIsRefreshing(true);
-    setTimeout(() => setIsRefreshing(false), 600);
-  };
+    if (selectedCategory === 'ALL') return newsStream;
+    return newsStream.filter((item) => item.category === selectedCategory);
+  }, [selectedCategory, newsStream]);
 
   return (
     <section id="live-news" className="bg-[#030303] text-white py-20 border-t border-white/10 relative overflow-hidden select-none">
@@ -51,13 +66,11 @@ export const LiveNewsFeed: React.FC = () => {
             </span>
           </div>
 
-          <button
-            onClick={handleRefresh}
-            className="inline-flex items-center gap-2 text-xs font-mono font-bold text-neutral-300 hover:text-[#CCFF00] bg-black/60 border border-white/15 px-4 py-2 rounded-md transition-all duration-200 hover:border-[#CCFF00]/50 uppercase"
-          >
-            <RefreshCw size={14} className={isRefreshing ? 'animate-spin text-[#CCFF00]' : ''} />
-            <span>REFRESH STREAM</span>
-          </button>
+          {/* Automatic 5-Minute Sync Status Badge (No manual button) */}
+          <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-md bg-black/40 border border-white/10 text-xs font-mono text-neutral-400 font-medium">
+            <Clock size={13} className="text-[#CCFF00]" />
+            <span>AUTO-SYNCING EVERY 5 MINS</span>
+          </div>
         </div>
 
         {/* H1 Main Title */}
@@ -72,7 +85,7 @@ export const LiveNewsFeed: React.FC = () => {
               <Radio size={14} /> BREAKING STREAM:
             </span>
             <div className="flex items-center gap-6 animate-marquee whitespace-nowrap text-xs font-mono text-neutral-300">
-              {OMNI_NEWS_DATA.map((item) => (
+              {newsStream.map((item) => (
                 <Link
                   key={item.id}
                   href={`/news/${item.id}`}
