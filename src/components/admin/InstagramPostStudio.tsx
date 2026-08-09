@@ -41,6 +41,12 @@ export const InstagramPostStudio: React.FC<Props> = ({ newsItem }) => {
   const [activePrompt, setActivePrompt] = useState<string | null>(null);
   const [activeProvider, setActiveProvider] = useState<string | null>(null);
   const cardRef = useRef<HTMLDivElement | null>(null);
+  const uploadInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Custom image upload state
+  const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [imageSource, setImageSource] = useState<'ai' | 'upload'>('ai');
 
   // Auto-generate AI background on story change
   useEffect(() => {
@@ -113,7 +119,39 @@ export const InstagramPostStudio: React.FC<Props> = ({ newsItem }) => {
     }
   };
 
-  // Image load state — Pollinations can take 15-30s on first generation
+  // Handle custom image upload
+  const handleImageUpload = (file: File) => {
+    if (!file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string;
+      setUploadedImageUrl(dataUrl);
+      setCustomImageUrl(dataUrl);
+      setImageSource('upload');
+      setImageLoaded(false);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleImageUpload(file);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) handleImageUpload(file);
+  };
+
+  const handleClearUpload = () => {
+    setUploadedImageUrl(null);
+    setImageSource('ai');
+    if (uploadInputRef.current) uploadInputRef.current.value = '';
+    handleGenerateServerAiBackground();
+  };
+
   const [imageLoaded, setImageLoaded] = useState(false);
 
   // Reset image loaded state when URL changes
@@ -277,6 +315,73 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
             <p className="text-[11px] font-mono text-neutral-300 leading-relaxed italic">{activePrompt}</p>
           </div>
         )}
+        {/* Custom Image Upload Zone */}
+        <div className="border-t border-white/10 pt-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] font-mono text-neutral-500 uppercase">OR UPLOAD YOUR OWN IMAGE:</span>
+            {imageSource === 'upload' && uploadedImageUrl && (
+              <button
+                onClick={handleClearUpload}
+                className="text-[10px] font-mono text-red-400 hover:text-red-300 uppercase flex items-center gap-1 transition-colors"
+              >
+                <span>✕</span>
+                <span>CLEAR — USE AI IMAGE</span>
+              </button>
+            )}
+          </div>
+
+          {/* Hidden file input */}
+          <input
+            ref={uploadInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleFileInputChange}
+          />
+
+          {uploadedImageUrl && imageSource === 'upload' ? (
+            /* Uploaded image preview */
+            <div className="flex items-center gap-4 p-3 bg-[#0a0a0a] border border-white/20 rounded-sm">
+              <img
+                src={uploadedImageUrl}
+                alt="Uploaded"
+                className="w-16 h-16 object-cover rounded-sm border border-white/20"
+              />
+              <div className="flex-1">
+                <div className="text-[10px] font-mono text-[#CCFF00] uppercase font-bold mb-1">✅ CUSTOM IMAGE ACTIVE</div>
+                <div className="text-[10px] font-mono text-neutral-400">Your uploaded image is being used as the post background</div>
+              </div>
+              <button
+                onClick={() => uploadInputRef.current?.click()}
+                className="text-[10px] font-mono text-neutral-400 hover:text-white px-3 py-1.5 border border-white/15 rounded-sm hover:border-white/40 transition-all uppercase"
+              >
+                CHANGE
+              </button>
+            </div>
+          ) : (
+            /* Drag & drop upload zone */
+            <div
+              onClick={() => uploadInputRef.current?.click()}
+              onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
+              onDragLeave={() => setIsDragOver(false)}
+              onDrop={handleDrop}
+              className={`flex flex-col items-center justify-center gap-2 p-5 border-2 border-dashed rounded-sm cursor-pointer transition-all ${
+                isDragOver
+                  ? 'border-[#CCFF00] bg-[#CCFF00]/5 scale-[1.01]'
+                  : 'border-white/15 hover:border-white/35 hover:bg-white/[0.02]'
+              }`}
+            >
+              <ImageIcon size={22} className={isDragOver ? 'text-[#CCFF00]' : 'text-neutral-500'} />
+              <div className="text-center">
+                <div className={`text-xs font-mono font-bold uppercase ${isDragOver ? 'text-[#CCFF00]' : 'text-neutral-400'}`}>
+                  {isDragOver ? 'DROP TO UPLOAD' : 'DRAG & DROP OR CLICK TO UPLOAD'}
+                </div>
+                <div className="text-[10px] font-mono text-neutral-600 mt-0.5">PNG, JPG, WEBP — replaces AI background</div>
+              </div>
+            </div>
+          )}
+        </div>
+
         {apiNotice && (
           <div className="p-2.5 bg-yellow-500/10 border border-yellow-500/30 rounded-sm text-[11px] font-mono text-yellow-300 flex items-center justify-between">
             <span>💡 {apiNotice}</span>
