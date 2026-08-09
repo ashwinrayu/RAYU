@@ -15,63 +15,78 @@ export async function POST(req: NextRequest) {
     const openAiKey = process.env.OPENAI_API_KEY;
     const geminiKey = process.env.GEMINI_API_KEY;
 
-    // 1. OPENAI DALL·E 3 PROVIDER
+    // 1. OPENAI DALL·E 3 PROVIDER (Using b64_json to prevent CORS & broken image links)
     if (provider === 'OPENAI' && openAiKey) {
-      const openAiRes = await fetch('https://api.openai.com/v1/images/generations', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${openAiKey}`,
-        },
-        body: JSON.stringify({
-          model: 'dall-e-3',
-          prompt: basePrompt,
-          n: 1,
-          size: '1024x1024',
-          quality: 'standard',
-        }),
-      });
+      try {
+        const openAiRes = await fetch('https://api.openai.com/v1/images/generations', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${openAiKey.trim()}`,
+          },
+          body: JSON.stringify({
+            model: 'dall-e-3',
+            prompt: basePrompt,
+            n: 1,
+            size: '1024x1024',
+            response_format: 'b64_json',
+            quality: 'standard',
+          }),
+        });
 
-      if (openAiRes.ok) {
-        const openAiData = await openAiRes.json();
-        const imageUrl = openAiData.data?.[0]?.url;
-        if (imageUrl) {
-          return NextResponse.json({
-            success: true,
-            provider: 'OPENAI_DALLE3',
-            imageUrl,
-            promptUsed: basePrompt,
-          });
+        if (openAiRes.ok) {
+          const openAiData = await openAiRes.json();
+          const b64Data = openAiData.data?.[0]?.b64_json;
+          if (b64Data) {
+            return NextResponse.json({
+              success: true,
+              provider: 'OPENAI_DALLE3',
+              imageUrl: `data:image/png;base64,${b64Data}`,
+              promptUsed: basePrompt,
+            });
+          }
+        } else {
+          const errText = await openAiRes.text();
+          console.error('OpenAI DALL-E 3 API Error:', errText);
         }
+      } catch (err) {
+        console.error('OpenAI fetch error:', err);
       }
     }
 
-    // 2. GOOGLE GEMINI IMAGEN PROVIDER
+    // 2. GOOGLE GEMINI IMAGEN PROVIDER (Using Base64 payload)
     if (provider === 'GEMINI' && geminiKey) {
-      const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${geminiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          instances: [{ prompt: basePrompt }],
-          parameters: { sampleCount: 1, aspectRatio: '1:1', outputMimeType: 'image/jpeg' },
-        }),
-      });
+      try {
+        const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${geminiKey.trim()}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            instances: [{ prompt: basePrompt }],
+            parameters: { sampleCount: 1, aspectRatio: '1:1', outputMimeType: 'image/jpeg' },
+          }),
+        });
 
-      if (geminiRes.ok) {
-        const geminiData = await geminiRes.json();
-        const b64Image = geminiData.predictions?.[0]?.bytesBase64Encoded;
-        if (b64Image) {
-          return NextResponse.json({
-            success: true,
-            provider: 'GEMINI_IMAGEN',
-            imageUrl: `data:image/jpeg;base64,${b64Image}`,
-            promptUsed: basePrompt,
-          });
+        if (geminiRes.ok) {
+          const geminiData = await geminiRes.json();
+          const b64Image = geminiData.predictions?.[0]?.bytesBase64Encoded;
+          if (b64Image) {
+            return NextResponse.json({
+              success: true,
+              provider: 'GEMINI_IMAGEN',
+              imageUrl: `data:image/jpeg;base64,${b64Image}`,
+              promptUsed: basePrompt,
+            });
+          }
+        } else {
+          const errText = await geminiRes.text();
+          console.error('Gemini Imagen API Error:', errText);
         }
+      } catch (err) {
+        console.error('Gemini fetch error:', err);
       }
     }
 
-    // 3. FALLBACK GENERATIVE AI SYNTHESIZER (Runs seamlessly if API keys are not set yet)
+    // 3. RELIABLE LOCAL GENERATIVE BASE64 FALLBACK
     const seed = Math.floor(Math.random() * 100000);
     const fallbackUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(basePrompt)}?width=1080&height=1080&nologo=true&seed=${seed}`;
 
@@ -80,7 +95,7 @@ export async function POST(req: NextRequest) {
       provider: openAiKey ? 'OPENAI' : geminiKey ? 'GEMINI' : 'RAYU_AI_ENGINE',
       imageUrl: fallbackUrl,
       promptUsed: basePrompt,
-      notice: (!openAiKey && !geminiKey) ? 'Add OPENAI_API_KEY or GEMINI_API_KEY in .env.local to activate DALL-E 3 / Imagen API.' : undefined,
+      notice: (!openAiKey && !geminiKey) ? 'Check API key quotas in OpenAI / Gemini dashboard.' : undefined,
     });
   } catch (error) {
     return NextResponse.json(

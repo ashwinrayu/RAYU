@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Copy, Download, Check, Sparkles, Share2, AlertCircle, Quote, Cpu, Newspaper, Loader2, Film, Layers, MessageSquare, LayoutGrid, Image as ImageIcon, RefreshCw, Sliders, ShieldCheck, Zap } from 'lucide-react';
+import { Copy, Download, Check, Sparkles, Share2, AlertCircle, Quote, Cpu, Newspaper, Loader2, Film, Layers, MessageSquare, LayoutGrid, Image as ImageIcon, RefreshCw, Zap } from 'lucide-react';
 import { OmniNewsItem } from '@/services/newsFetcher';
 import { INSTAGRAM_HANDLE, WEBSITE_DOMAIN } from '@/data/instagram';
 import { toPng } from 'html-to-image';
@@ -84,12 +84,11 @@ export const InstagramPostStudio: React.FC<Props> = ({ newsItem }) => {
           setApiNotice(data.notice);
         }
       } else {
-        // Fallback to client synthesis if server call errors
         const clientDataUrl = generateInStudioAiVisual(newsItem.title, newsItem.category, newsItem.summary);
         if (clientDataUrl) setCustomImageUrl(clientDataUrl);
       }
     } catch (err) {
-      console.error('Server AI Background generation failed:', err);
+      console.error('Server AI Background generation error:', err);
       const clientDataUrl = generateInStudioAiVisual(newsItem.title, newsItem.category, newsItem.summary);
       if (clientDataUrl) setCustomImageUrl(clientDataUrl);
     } finally {
@@ -100,7 +99,13 @@ export const InstagramPostStudio: React.FC<Props> = ({ newsItem }) => {
     }
   };
 
-  const activeDisplayImage = customImageUrl || newsItem.imageUrl || 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80';
+  // Image load error fallback handler
+  const handleImageError = () => {
+    const clientDataUrl = generateInStudioAiVisual(newsItem.title, newsItem.category, newsItem.summary);
+    if (clientDataUrl) setCustomImageUrl(clientDataUrl);
+  };
+
+  const activeDisplayImage = customImageUrl || newsItem.imageUrl || generateInStudioAiVisual(newsItem.title, newsItem.category, newsItem.summary);
 
   // Generate Instagram Caption
   const instagramCaption = `⚡ RAYU SOCIAL STREAM: [${newsItem.category}]
@@ -179,7 +184,7 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
               <span className="text-xs font-mono text-neutral-400">
                 {isGeneratingAI
                   ? `CALLING ${aiProvider} API... GENERATING ARTWORK (${elapsedTimer}s)`
-                  : `ARTWORK COMPOSITED IN ${generationTimeMs || 1.2}s • CRISP CODE TYPOGRAPHY OVERLAY READY`}
+                  : `ARTWORK COMPOSITED IN ${generationTimeMs || 1.2}s • BASE64 PAYLOAD ACTIVE`}
               </span>
             </div>
           </div>
@@ -387,11 +392,12 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
                 ref={cardRef}
                 className="relative aspect-square w-full bg-[#050505] border border-white/20 rounded-sm p-6 flex flex-col justify-between overflow-hidden shadow-2xl"
               >
-                {/* Background AI Artwork Layer */}
+                {/* Background AI Artwork Layer with Error Fallback */}
                 {activeDisplayImage && (
                   <img
                     src={activeDisplayImage}
                     alt={newsItem.title}
+                    onError={handleImageError}
                     className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${isGeneratingAI ? 'opacity-20 scale-105' : 'opacity-40 scale-100'}`}
                   />
                 )}
