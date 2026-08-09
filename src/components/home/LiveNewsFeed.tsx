@@ -4,11 +4,13 @@ import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
-import { Radio, ArrowRight, Sparkles, AlertTriangle, Film, Gamepad2, CloudSun, Landmark, Cpu, Globe, Maximize2, ChevronRight, Clock, Search, ChevronLeft } from 'lucide-react';
+import { Radio, ArrowRight, Sparkles, AlertTriangle, Film, Gamepad2, CloudSun, Landmark, Cpu, Globe, Maximize2, ChevronRight, Clock, Search, ChevronLeft, Flame, Lightbulb } from 'lucide-react';
 import { OMNI_NEWS_DATA, OmniNewsItem } from '@/services/newsFetcher';
 
 const CATEGORY_TABS = [
   { key: 'ALL', label: 'ALL UPDATES', icon: Sparkles },
+  { key: 'VIRAL', label: '🔥 VIRAL & GTA VI', icon: Flame },
+  { key: 'HACKS', label: '💡 TECH HACKS & DIY', icon: Lightbulb },
   { key: 'INDIA', label: 'IN INDIA', icon: Globe },
   { key: 'WAR', label: '⚡ WAR & GEOPOLITICS', icon: AlertTriangle },
   { key: 'POLITICS', label: 'POLITICS & ECONOMY', icon: Landmark },
@@ -113,7 +115,7 @@ export const LiveNewsFeed: React.FC = () => {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="SEARCH VASTLY ACROSS WORLD & INDIA NEWS (e.g. Semiconductor, ISRO, AI, IMAX, Weather)..."
+              placeholder="SEARCH VASTLY (e.g. GTA VI, Hacks, DIY, Local LLM, ISRO, AI, Terminal, Weather)..."
               className="w-full bg-[#090909] border border-white/15 focus:border-[#CCFF00] pl-11 pr-4 py-3.5 text-xs font-mono text-white placeholder:text-neutral-500 rounded-md outline-none transition-colors shadow-inner"
             />
           </div>
@@ -121,7 +123,7 @@ export const LiveNewsFeed: React.FC = () => {
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="px-4 py-3 bg-white/10 hover:bg-white/20 text-xs font-mono text-neutral-300 rounded-md transition-colors uppercase shrink-0"
+              className="px-4 py-3 bg-white/10 hover:bg-white/20 text-xs font-mono text-neutral-300 rounded-md transition-colors uppercase shrink-0 cursor-pointer"
             >
               CLEAR SEARCH
             </button>
@@ -162,7 +164,7 @@ export const LiveNewsFeed: React.FC = () => {
               <button
                 key={tab.key}
                 onClick={() => setSelectedCategory(tab.key)}
-                className={`inline-flex items-center gap-2 text-xs font-mono font-bold px-4 py-2.5 rounded-md transition-all duration-200 uppercase whitespace-nowrap ${
+                className={`inline-flex items-center gap-2 text-xs font-mono font-bold px-4 py-2.5 rounded-md transition-all duration-200 uppercase whitespace-nowrap cursor-pointer ${
                   isSelected
                     ? 'bg-[#CCFF00] text-black font-extrabold shadow-[0_0_20px_rgba(204,255,0,0.4)] border border-[#CCFF00]'
                     : 'bg-[#090909] border border-white/10 text-neutral-300 hover:text-white hover:border-white/30'
@@ -248,7 +250,7 @@ export const LiveNewsFeed: React.FC = () => {
                 setSearchQuery('');
                 setSelectedCategory('ALL');
               }}
-              className="text-xs font-mono font-bold text-[#CCFF00] underline uppercase"
+              className="text-xs font-mono font-bold text-[#CCFF00] underline uppercase cursor-pointer"
             >
               Reset Search & Filters
             </button>
@@ -266,7 +268,7 @@ export const LiveNewsFeed: React.FC = () => {
               <button
                 disabled={currentPage === 1}
                 onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-                className="p-2.5 rounded bg-black border border-white/15 text-neutral-300 hover:text-white disabled:opacity-40 disabled:hover:text-neutral-300 transition-colors"
+                className="p-2.5 rounded bg-black border border-white/15 text-neutral-300 hover:text-white disabled:opacity-40 disabled:hover:text-neutral-300 transition-colors cursor-pointer"
               >
                 <ChevronLeft size={16} />
               </button>
@@ -275,7 +277,7 @@ export const LiveNewsFeed: React.FC = () => {
                 <button
                   key={pageNum}
                   onClick={() => setCurrentPage(pageNum)}
-                  className={`w-9 h-9 rounded font-mono text-xs font-bold transition-all ${
+                  className={`w-9 h-9 rounded font-mono text-xs font-bold transition-all cursor-pointer ${
                     currentPage === pageNum
                       ? 'bg-[#CCFF00] text-black border border-[#CCFF00] shadow-[0_0_10px_rgba(204,255,0,0.3)]'
                       : 'bg-black border border-white/15 text-neutral-300 hover:border-white/40 hover:text-white'
@@ -288,7 +290,7 @@ export const LiveNewsFeed: React.FC = () => {
               <button
                 disabled={currentPage === totalPages}
                 onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-                className="p-2.5 rounded bg-black border border-white/15 text-neutral-300 hover:text-white disabled:opacity-40 disabled:hover:text-neutral-300 transition-colors"
+                className="p-2.5 rounded bg-black border border-white/15 text-neutral-300 hover:text-white disabled:opacity-40 disabled:hover:text-neutral-300 transition-colors cursor-pointer"
               >
                 <ChevronRight size={16} />
               </button>

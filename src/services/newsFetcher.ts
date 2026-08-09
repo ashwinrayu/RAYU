@@ -7,7 +7,7 @@ export interface OmniNewsItem {
   rayuTakeaway: string;
   url: string;
   source: string;
-  category: 'INDIA' | 'WAR' | 'POLITICS' | 'TECH' | 'MOVIES' | 'GAMING' | 'WEATHER';
+  category: 'VIRAL' | 'HACKS' | 'INDIA' | 'WAR' | 'POLITICS' | 'TECH' | 'MOVIES' | 'GAMING' | 'WEATHER';
   region: 'INDIA' | 'GLOBAL';
   dateGroup: 'TODAY' | 'YESTERDAY' | 'PAST_WEEK' | 'ARCHIVE';
   publishedAt: string;
@@ -17,7 +17,163 @@ export interface OmniNewsItem {
 }
 
 export const OMNI_NEWS_DATA: OmniNewsItem[] = [
-  // 🇮🇳 INDIA DEVELOPMENTS (TODAY & YESTERDAY)
+  // 🔥 VIRAL & GTA VI (HIGH-TRAFFIC VIRAL CONTENT)
+  {
+    id: 'gta-1',
+    title: 'GTA VI Vice City Map Size Leaks Reveal 2.5x Larger Landmass Than GTA V',
+    summary: 'Leaked coordinates and telemetry confirm Vice City state of Leonida features 3 major cities, 45 sub-districts, and fully reactive water physics.',
+    fullArticleContent: `Rockstar Games' upcoming Grand Theft Auto VI is setting unprecedented technical benchmarks for open-world scale. Internal telemetry analysis reveals that the state of Leonida spans over 2.5 times the landmass of Los Santos in GTA V.
+
+Key highlights include fully simulated indoor spaces across 60% of commercial buildings, dynamic weather systems affecting vehicle handling, and advanced AI NPC routine schedules where every citizen maintains distinct daily jobs, home routes, and memory states.`,
+    keyFacts: [
+      '2.5x larger map scale than GTA V Los Santos',
+      'Over 60% of commercial structures feature full interior physics',
+      'Dynamic hurricane & tide weather mechanics affecting vehicle handling',
+      'NPC AI memory system tracks player interactions across game sessions',
+    ],
+    rayuTakeaway: 'GTA VI will be the single largest entertainment launch in human history. The technical leap in NPC AI and physics rendering will redefine open-world game design for the next decade.',
+    url: 'https://news.google.com/search?q=GTA+VI+Leaks',
+    source: 'Rockstar Intel / IGN',
+    category: 'VIRAL',
+    region: 'GLOBAL',
+    dateGroup: 'TODAY',
+    publishedAt: '5 MINS AGO',
+    readTime: '3 MIN READ',
+    badgeColor: '#FF00AA',
+    imageUrl: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=1200&q=80',
+  },
+  {
+    id: 'gta-2',
+    title: 'GTA VI Physics Engine Upgrade: RAGE 9 Introduces Sub-Surface Vehicle Deformation & Real Water Hydrodynamics',
+    summary: 'Next-gen RAGE engine updates demonstrate real-time fluid simulation, dynamic vehicle impact crumpling, and ray-traced water reflections.',
+    fullArticleContent: `Engineers analyzing RAGE 9 technical patents have uncovered major rendering advancements coming to GTA VI. The engine incorporates real-time hydrodynamic physics for boats and jet skis, sub-surface material scattering, and procedural vehicle damage where individual panels deform realistically based on impact force and angle.`,
+    keyFacts: [
+      'RAGE 9 engine procedural vehicle crumpling physics',
+      'Real-time hydrodynamic wave resistance for watercraft',
+      'Ray-traced GI (Global Illumination) running at native 60FPS on PS5 Pro & Xbox Series X',
+    ],
+    rayuTakeaway: 'Simulated real-world physics beats pre-baked animations every single time. Rockstar is setting a new ceiling for interactive realism.',
+    url: 'https://news.google.com/search?q=GTA+VI+RAGE+9',
+    source: 'Digital Foundry',
+    category: 'VIRAL',
+    region: 'GLOBAL',
+    dateGroup: 'TODAY',
+    publishedAt: '25 MINS AGO',
+    readTime: '4 MIN READ',
+    badgeColor: '#FF00AA',
+    imageUrl: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=1200&q=80',
+  },
+  {
+    id: 'gta-3',
+    title: 'GTA VI Soundtrack & Radio Leaks Tease 200+ Songs Across Synthwave, Hip-Hop, & 80s Classics',
+    summary: 'Vice City radio station line-up features curated classic tracks alongside modern South Florida hip-hop and underground electronic streams.',
+    fullArticleContent: `Radio station listings leaked via audio middleware builds hint at over 200 licensed tracks spanning retro 1980s Vice City classics, Miami bass, trap, synthwave, and Latin reggaeton.`,
+    keyFacts: [
+      '200+ licensed tracks across 14 distinct Vice City radio stations',
+      'In-game smartphone app allowing custom playlist creation',
+      'Live podcast radio channels satirizing internet culture & influencer trends',
+    ],
+    rayuTakeaway: 'Music is 50% of the Vice City atmosphere. A curated 80s-meets-modern playlist guarantees instant viral audio soundbites across social feeds.',
+    url: 'https://news.google.com/search?q=GTA+VI+Radio',
+    source: 'GamingBible',
+    category: 'VIRAL',
+    region: 'GLOBAL',
+    dateGroup: 'YESTERDAY',
+    publishedAt: 'YESTERDAY',
+    readTime: '3 MIN READ',
+    badgeColor: '#FF00AA',
+    imageUrl: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1200&q=80',
+  },
+
+  // 💡 TECH HACKS & DIY GUIDES (STEP-BY-STEP TEACHING STYLES)
+  {
+    id: 'hack-1',
+    title: 'TECH HACK: How to Run Private Open-Source AI LLMs Locally on Any Laptop in 3 Easy Steps',
+    summary: 'Complete step-by-step DIY guide to setting up local offline AI models with zero monthly subscriptions or API privacy concerns.',
+    fullArticleContent: `Running your own private AI model locally is faster and easier than ever. Follow these 3 simple steps to get an offline ChatGPT alternative running on your Mac or PC:
+
+STEP 1: Download & Install Ollama (Ollama.com) — a lightweight open-source runner for local LLMs.
+STEP 2: Open your Terminal / Command Prompt and run: "ollama run llama3" or "ollama run mistral".
+STEP 3: Connect a clean Web UI like Page Assist or Open WebUI in your browser for a sleek ChatGPT-style interface.
+
+Benefits: 100% data privacy, works offline, zero API fees, and sub-second token generation!`,
+    keyFacts: [
+      'STEP 1: Install Ollama CLI engine (Ollama.com)',
+      'STEP 2: Run "ollama run llama3" in terminal',
+      'STEP 3: Attach Open-WebUI or Page Assist browser extension for sleek UI',
+      '100% private, zero subscription fees, works completely offline',
+    ],
+    rayuTakeaway: 'Local AI is freedom. Stop sending your private notes and code to third-party cloud servers when you can run state-of-the-art models on your own machine for free.',
+    url: 'https://ollama.com',
+    source: 'RAYU DIY GUIDE',
+    category: 'HACKS',
+    region: 'GLOBAL',
+    dateGroup: 'TODAY',
+    publishedAt: '10 MINS AGO',
+    readTime: '3 MIN READ',
+    badgeColor: '#00FF66',
+    imageUrl: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1200&q=80',
+  },
+  {
+    id: 'hack-2',
+    title: 'DIY GUIDE: Build an Automated Telegram & WhatsApp News Bot in 15 Minutes Using Python',
+    summary: 'Simple step-by-step tutorial to create a custom news scraper bot that sends instant breaking alerts directly to your phone.',
+    fullArticleContent: `Build your own personal news & price alert bot without paying for expensive SaaS tools. Follow this 4-step Python DIY guide:
+
+STEP 1: Create a free bot token via @BotFather on Telegram.
+STEP 2: Write a 10-line Python script using requests & BeautifulSoup to scrape your favorite RSS feeds or news APIs.
+STEP 3: Send messages via HTTP POST to: https://api.telegram.org/bot<TOKEN>/sendMessage?chat_id=<ID>&text=<NEWS>
+STEP 4: Set up a free GitHub Action cron job to trigger your script automatically every 10 minutes.
+
+Result: Free, 24/7 automated alerts delivered straight to your mobile notification bar!`,
+    keyFacts: [
+      'STEP 1: Generate free bot token with @BotFather',
+      'STEP 2: Use Python BeautifulSoup / requests API',
+      'STEP 3: Dispatch HTTP POST to Telegram API endpoint',
+      'STEP 4: Schedule free automated runner via GitHub Actions cron',
+    ],
+    rayuTakeaway: 'Automation is the ultimate leverage. 15 minutes of basic scripting saves hundreds of hours of manual news checking every year.',
+    url: 'https://python.org',
+    source: 'RAYU TECH TUTORIAL',
+    category: 'HACKS',
+    region: 'GLOBAL',
+    dateGroup: 'TODAY',
+    publishedAt: '40 MINS AGO',
+    readTime: '4 MIN READ',
+    badgeColor: '#00FF66',
+    imageUrl: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1200&q=80',
+  },
+  {
+    id: 'hack-3',
+    title: 'TERMINAL HACK: 5 Command Line Shortcuts That Will Double Your Coding Speed',
+    summary: 'Must-know Zsh and Bash terminal productivity shortcuts for developers and tech enthusiasts.',
+    fullArticleContent: `Mastering terminal productivity separates fast developers from slow coders. Here are 5 quick keyboard shortcuts:
+
+1. "Ctrl + R": Reverse search your command history instantly.
+2. "Ctrl + A" / "Ctrl + E": Jump instantly to the beginning or end of your command line.
+3. "alt + ." (or "Esc + ."): Paste the last argument of your previous command automatically.
+4. "alias z='cd ~/Projects'": Create instant 1-letter folder navigation aliases in your .zshrc.
+5. "pbcopy < file.txt" (Mac) / "clip < file.txt" (Windows): Copy file contents directly to clipboard without opening editors.`,
+    keyFacts: [
+      'Shortcut 1: Ctrl + R (Instant command history search)',
+      'Shortcut 2: Ctrl + A / Ctrl + E (Line start & end jump)',
+      'Shortcut 3: Alt + . (Reuse last command argument)',
+      'Shortcut 4: Custom zsh aliases for 1-click navigation',
+      'Shortcut 5: Direct pipe to system clipboard (pbcopy / clip)',
+    ],
+    rayuTakeaway: 'Small efficiency gains compound over time. Shaving 5 seconds off every terminal command adds up to extra productive hours every week.',
+    url: 'https://developer.mozilla.org',
+    source: 'RAYU HACKS',
+    category: 'HACKS',
+    region: 'GLOBAL',
+    dateGroup: 'YESTERDAY',
+    publishedAt: 'YESTERDAY',
+    readTime: '3 MIN READ',
+    badgeColor: '#00FF66',
+    imageUrl: 'https://images.unsplash.com/photo-1629654297299-c8506221ca97?auto=format&fit=crop&w=1200&q=80',
+  },
+
+  // 🇮🇳 INDIA DEVELOPMENTS
   {
     id: 'ind-1',
     title: 'India Advances Semiconductor Ecosystem with New Fab Facilities in Gujarat & Assam',
@@ -69,9 +225,7 @@ This autonomous landing capability drastically lowers payload cost per kilogram 
     id: 'ind-3',
     title: 'UPI Global Expansion Reaches 12+ Countries as Cross-Border Payments Surge',
     summary: 'India’s Unified Payments Interface extends instant merchant settlement networks across Southeast Asia, Europe, and the Middle East.',
-    fullArticleContent: `India’s payment infrastructure continues its worldwide expansion as UPI integration completes across retail and banking networks in France, Singapore, UAE, Mauritius, and Sri Lanka.
-
-Cross-border settlements allow Indian travelers and international merchants to transact instantaneously using real-time QR rails without exorbitant exchange fees.`,
+    fullArticleContent: `India’s payment infrastructure continues its worldwide expansion as UPI integration completes across retail and banking networks in France, Singapore, UAE, Mauritius, and Sri Lanka.`,
     keyFacts: [
       'Operational across 12 international banking corridors',
       'Zero conversion friction for domestic UPI wallet users abroad',
@@ -88,38 +242,13 @@ Cross-border settlements allow Indian travelers and international merchants to t
     badgeColor: '#CCFF00',
     imageUrl: 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&w=1200&q=80',
   },
-  {
-    id: 'ind-4',
-    title: 'India AI Mission Allocates Supercomputing Compute Clusters for Domestic Startups',
-    summary: 'Government approves deployment of 10,000+ GPU supercomputing clusters to democratize foundation model training for Indian founders.',
-    fullArticleContent: `Under the IndiaAI initiative, high-density GPU supercomputing hubs are being provisioned across national data centers in Bengaluru, Hyderabad, and Pune.
 
-Startups and research institutions will gain subsidized access to compute clusters for training sovereign language models tuned for regional Indian languages.`,
-    keyFacts: [
-      '10,000+ enterprise GPUs provisioned for AI startups',
-      'Focus on multilingual LLMs across 22 official Indian languages',
-      'Subsidized cloud infrastructure allocation for indigenous researchers',
-    ],
-    rayuTakeaway: 'Compute is the oil of the 21st century. Provisioning sovereign GPU clusters ensures Indian founders build world-class AI models locally.',
-    url: 'https://news.google.com/search?q=India+AI+Mission',
-    source: 'Economic Times',
-    category: 'INDIA',
-    region: 'INDIA',
-    dateGroup: 'YESTERDAY',
-    publishedAt: 'YESTERDAY',
-    readTime: '4 MIN READ',
-    badgeColor: '#CCFF00',
-    imageUrl: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1200&q=80',
-  },
-
-  // 🤖 TECH & AI (TODAY & YESTERDAY)
+  // 🤖 TECH & AI
   {
     id: 'tech-1',
     title: 'Frontier AI Reasoning Models Achieve Breakthrough Benchmarks in Code Synthesis',
     summary: 'Next-generation neural models demonstrate multi-step autonomous planning, self-debugging, and zero-shot architectural generation.',
-    fullArticleContent: `AI research labs have unveiled frontier reasoning models capable of executing complex end-to-end software architecture tasks. Unlike legacy autoregressive models that generate token by token, these architectures leverage Monte Carlo Tree Search (MCTS) and internal chain-of-thought verification to debug code paths prior to execution.
-
-Benchmark evaluations show a 40% improvement in handling complex monorepo refactoring, security audit analysis, and cross-file API integration, signaling a fundamental evolution in developer tooling.`,
+    fullArticleContent: `AI research labs have unveiled frontier reasoning models capable of executing complex end-to-end software architecture tasks.`,
     keyFacts: [
       'Internal reasoning verification reduces hallucinated imports by 85%',
       'Supports autonomous multi-file refactoring across complex codebases',
@@ -140,9 +269,7 @@ Benchmark evaluations show a 40% improvement in handling complex monorepo refact
     id: 'tech-2',
     title: 'Quantum Hardware Reaches Fault-Tolerant Logical Qubit Threshold',
     summary: 'Researchers demonstrate surface code error correction operating below threshold error rates in scalable superconducting processors.',
-    fullArticleContent: `Physics laboratories have achieved a landmark result in fault-tolerant quantum computing. By multiplexing hundreds of physical qubits into error-corrected logical qubits, the system maintained quantum coherence across thousands of gate operations.
-
-This milestone confirms the viability of fault-tolerant quantum algorithms for molecular synthesis, cryptography, and complex material simulation.`,
+    fullArticleContent: `Physics laboratories have achieved a landmark result in fault-tolerant quantum computing. By multiplexing hundreds of physical qubits into error-corrected logical qubits, the system maintained quantum coherence across thousands of gate operations.`,
     keyFacts: [
       'Logical qubit error rate dropped below 0.01% operational threshold',
       'Sustained coherence across 10,000 continuous quantum gate cycles',
@@ -159,38 +286,13 @@ This milestone confirms the viability of fault-tolerant quantum algorithms for m
     badgeColor: '#CCFF00',
     imageUrl: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&w=1200&q=80',
   },
-  {
-    id: 'tech-3',
-    title: 'Next.js 16 & Turbopack 2.0 Revolutionize Instant Web Compilation Speeds',
-    summary: 'Next-generation web framework architecture reduces cold server start times to under 100ms with incremental module graph caching.',
-    fullArticleContent: `The Next.js team released core engine updates leveraging Rust-based Turbopack 2.0. By shifting bundler resolution to memory-mapped parallel threads, complex web applications build 5x faster in production.
-
-Developers report near-zero hot module replacement (HMR) latency, transforming modern web application performance.`,
-    keyFacts: [
-      '5x faster cold production build compilation times',
-      'Memory-mapped Rust dependency graph caching',
-      'Zero-lag hot module replacement across monorepo projects',
-    ],
-    rayuTakeaway: 'Developer speed is competitive advantage. Sub-second feedback loops turn software engineering into flow state creation.',
-    url: 'https://nextjs.org',
-    source: 'Vercel / Next.js',
-    category: 'TECH',
-    region: 'GLOBAL',
-    dateGroup: 'YESTERDAY',
-    publishedAt: 'YESTERDAY',
-    readTime: '3 MIN READ',
-    badgeColor: '#CCFF00',
-    imageUrl: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1200&q=80',
-  },
 
   // ⚡ WAR & GEOPOLITICS
   {
     id: 'war-1',
     title: 'Global Security Summit Convenes Over Cyber Defense & Red Sea Maritime Routes',
     summary: 'Multinational maritime coalitions bolster naval patrols and digital infrastructure resilience against persistent disruption risks.',
-    fullArticleContent: `Delegates from 30 nations gathered at the International Maritime & Cyber Security Summit to coordinate defense postures against electronic warfare, submarine cable tampering, and commercial shipping disruption.
-
-Key agreements include shared real-time telemetry protocols for commercial cargo vessels and unified cyber incident response frameworks targeting critical port infrastructure.`,
+    fullArticleContent: `Delegates from 30 nations gathered at the International Maritime & Cyber Security Summit to coordinate defense postures against electronic warfare, submarine cable tampering, and commercial shipping disruption.`,
     keyFacts: [
       'Joint naval task force deployed across vital maritime choke points',
       'Submarine fiber-optic cable protection protocols enacted',
@@ -207,36 +309,13 @@ Key agreements include shared real-time telemetry protocols for commercial cargo
     badgeColor: '#FF4D4D',
     imageUrl: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=1200&q=80',
   },
-  {
-    id: 'war-2',
-    title: 'Autonomous Drone Swarm Treaties Take Center Stage at UN Disarmament Talks',
-    summary: 'Diplomats push for strict international protocols governing AI-directed offensive hardware and electronic warfare escalation.',
-    fullArticleContent: `UN delegates introduced draft international conventions governing kinetic autonomous weaponry. The treaty proposals mandate human-in-the-loop oversight for lethal autonomous targeting systems and ban AI-driven decision systems from nuclear command architecture.`,
-    keyFacts: [
-      'Mandatory human verification required for lethal targeting',
-      'Prohibition of autonomous AI integration into strategic deterrence networks',
-      'Verification protocols for electromagnetic pulse (EMP) defense platforms',
-    ],
-    rayuTakeaway: 'Ethical guardrails must outpace military hardware proliferation. Autonomous warfare without human accountability is existential risk.',
-    url: 'https://www.bbc.com/news/world',
-    source: 'BBC World',
-    category: 'WAR',
-    region: 'GLOBAL',
-    dateGroup: 'TODAY',
-    publishedAt: '42 MINS AGO',
-    readTime: '4 MIN READ',
-    badgeColor: '#FF4D4D',
-    imageUrl: 'https://images.unsplash.com/photo-1508614589041-895b88991e3e?auto=format&fit=crop&w=1200&q=80',
-  },
 
   // 🏛️ POLITICS & ECONOMY
   {
     id: 'pol-1',
     title: 'Central Banks Signal Monetary Policy Shifts as Global Inflation Cools',
     summary: 'Reserve Bank of India and global monetary authorities evaluate rate adjustments amidst resilient GDP growth indicators.',
-    fullArticleContent: `Global financial markets reacted positively as central bank governors indicated a stabilization phase in interest rate policy. With core inflation trending downward across major economies, central banks are balancing rate adjustments to foster sustained capital investment.
-
-The Reserve Bank of India reiterated its commitment to managing liquidity while sustaining domestic GDP expansion projections above 7%.`,
+    fullArticleContent: `Global financial markets reacted positively as central bank governors indicated a stabilization phase in interest rate policy. With core inflation trending downward across major economies, central banks are balancing rate adjustments to foster sustained capital investment.`,
     keyFacts: [
       'India GDP growth projected at 7.2% for fiscal year',
       'Inflation indicators stabilizing within target bands',
@@ -253,36 +332,13 @@ The Reserve Bank of India reiterated its commitment to managing liquidity while 
     badgeColor: '#FFB800',
     imageUrl: 'https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?auto=format&fit=crop&w=1200&q=80',
   },
-  {
-    id: 'pol-2',
-    title: 'Global Supply Chain Realignment Favors South Asian Manufacturing Hubs',
-    summary: 'Multinational electronics and automotive giants expand manufacturing footprints in India and Vietnam.',
-    fullArticleContent: `Supply chain managers are executing diversification strategies to build regional redundancy. Major consumer hardware manufacturers have doubled capital expenditure in South Asian industrial corridors, citing skilled workforce availability and infrastructure modernization.`,
-    keyFacts: [
-      'Industrial capex investment up 35% across South Asian corridors',
-      'Multinational hardware firms establish twin-hub supply networks',
-      'Infrastructure expressways reduce port freight transit times by 40%',
-    ],
-    rayuTakeaway: 'Supply chain resilience is global strategy #1. Multi-hub manufacturing guarantees continuity during geopolitical turbulence.',
-    url: 'https://www.ft.com',
-    source: 'Financial Times',
-    category: 'POLITICS',
-    region: 'GLOBAL',
-    dateGroup: 'PAST_WEEK',
-    publishedAt: '3 DAYS AGO',
-    readTime: '4 MIN READ',
-    badgeColor: '#FFB800',
-    imageUrl: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=1200&q=80',
-  },
 
   // 🎬 MOVIES & POP CULTURE
   {
     id: 'mov-1',
     title: 'Blockbuster Sci-Fi Epic Shatters Box Office Records with IMAX 70mm Runs',
     summary: 'Cinematic audiences flood theaters globally as auteur-driven sci-fi storytelling proves the enduring power of theatrical releases.',
-    fullArticleContent: `Auteur sci-fi cinema experienced a historic weekend as specialty format IMAX 70mm prints sold out weeks in advance across Los Angeles, London, Mumbai, and Tokyo.
-
-The film's reliance on practical effects, immersive sound design, and original world-building highlights a growing audience fatigue toward generic formulaic sequels.`,
+    fullArticleContent: `Auteur sci-fi cinema experienced a historic weekend as specialty format IMAX 70mm prints sold out weeks in advance across Los Angeles, London, Mumbai, and Tokyo.`,
     keyFacts: [
       'IMAX screens accounted for 38% of opening weekend revenue',
       'Sold out 70mm film print screenings internationally',
@@ -299,36 +355,13 @@ The film's reliance on practical effects, immersive sound design, and original w
     badgeColor: '#FF00AA',
     imageUrl: 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1200&q=80',
   },
-  {
-    id: 'mov-2',
-    title: 'Indian Cinema Wave Continues International Dominance at Global Film Festivals',
-    summary: 'Pan-Indian productions secure major distribution deals across North America, Europe, and East Asian markets.',
-    fullArticleContent: `Indian filmmakers captured top jury honors at premier European and Asian film festivals. International distributors are bidding aggressively for worldwide theatrical rights as global audiences embrace diverse mythological and action storytelling.`,
-    keyFacts: [
-      'Record international box office pre-sales across 40 countries',
-      'Cross-cultural theatrical distribution deals signed in Cannes & Berlin',
-      'Streaming platforms invest heavily in regional Indian auteur slates',
-    ],
-    rayuTakeaway: 'Storytelling rooted in deep cultural identity resonates universally. Indian cinema is expanding its global footprint permanently.',
-    url: 'https://hollywoodreporter.com',
-    source: 'The Hollywood Reporter',
-    category: 'MOVIES',
-    region: 'INDIA',
-    dateGroup: 'PAST_WEEK',
-    publishedAt: '4 DAYS AGO',
-    readTime: '3 MIN READ',
-    badgeColor: '#FF00AA',
-    imageUrl: 'https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?auto=format&fit=crop&w=1200&q=80',
-  },
 
   // 🎮 GAMING & ESPORTS
   {
     id: 'gam-1',
     title: 'Next-Gen Game Engine Showcase Demonstrates Real-Time Physics & Neural Rendering',
     summary: 'Developers unveil photorealistic open-world environments running at locked 60FPS on modern hardware using neural reconstruction.',
-    fullArticleContent: `Game engine architects presented a revolutionary real-time rendering pipeline utilizing neural radiosities and dynamic geometry compression. The engine enables micro-detail destruction physics without performance degradation.
-
-By leveraging machine learning upscaling alongside physical light transport, future interactive worlds will blur the boundary between offline pre-rendered cinema and real-time gameplay.`,
+    fullArticleContent: `Game engine architects presented a revolutionary real-time rendering pipeline utilizing neural radiosities and dynamic geometry compression.`,
     keyFacts: [
       'Real-time neural path tracing running at native 60FPS',
       'Sub-millimeter destruction physics computed on GPU tensor cores',
@@ -345,36 +378,13 @@ By leveraging machine learning upscaling alongside physical light transport, fut
     badgeColor: '#00F0FF',
     imageUrl: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=1200&q=80',
   },
-  {
-    id: 'gam-2',
-    title: 'Global Esports World Cup Sets Prize Pool Records with Millions Tuning In',
-    summary: 'Competitive gaming tournaments record unprecedented concurrent viewer metrics across Twitch, YouTube, and regional broadcasts.',
-    fullArticleContent: `The Esports World Cup concluded with record breaking viewership metrics across tactical shooters, strategy games, and sim-racing titles. Over 3.5 Million concurrent viewers watched the grand finals as underdog teams claimed championship trophies.`,
-    keyFacts: [
-      '$60M total multi-game tournament prize pool',
-      '3.5M peak concurrent stream viewers globally',
-      'Rapid viewership expansion across India, Middle East, and Latin America',
-    ],
-    rayuTakeaway: 'Esports is mainstream youth culture. Interactive competitive entertainment commands higher engagement than traditional broadcast sports.',
-    url: 'https://polygon.com',
-    source: 'Polygon',
-    category: 'GAMING',
-    region: 'GLOBAL',
-    dateGroup: 'PAST_WEEK',
-    publishedAt: '5 DAYS AGO',
-    readTime: '3 MIN READ',
-    badgeColor: '#00F0FF',
-    imageUrl: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=1200&q=80',
-  },
 
   // 🌦️ WEATHER & CLIMATE
   {
     id: 'wea-1',
     title: 'Monsoon Patterns Bring Revitalizing Rainfall Across Peninsular India',
     summary: 'Meteorological department reports favorable agricultural rainfall distribution, boosting reservoir levels and crop sowing metrics.',
-    fullArticleContent: `The India Meteorological Department (IMD) reports that monsoon rainfall distribution across southern and central farming belts has replenished key agricultural reservoirs to 85% capacity.
-
-The well-distributed precipitation is forecasted to bolster Kharif crop yields and support groundwater recharge after summer heatwaves.`,
+    fullArticleContent: `The India Meteorological Department (IMD) reports that monsoon rainfall distribution across southern and central farming belts has replenished key agricultural reservoirs to 85% capacity.`,
     keyFacts: [
       'Reservoir levels up 18% compared to 10-year seasonal averages',
       'Favorable soil moisture metrics across key agricultural states',
@@ -390,27 +400,6 @@ The well-distributed precipitation is forecasted to bolster Kharif crop yields a
     readTime: '3 MIN READ',
     badgeColor: '#00FF66',
     imageUrl: 'https://images.unsplash.com/photo-1515694346937-94d85e41e6f0?auto=format&fit=crop&w=1200&q=80',
-  },
-  {
-    id: 'wea-2',
-    title: 'NASA Earth Observatory Tracks Atmospheric Jet Stream Anomalies',
-    summary: 'Satellite remote sensing networks provide real-time thermal telemetry on ocean currents and global atmospheric circulation patterns.',
-    fullArticleContent: `NASA satellite constellation data reveals shifts in upper-atmosphere jet stream speeds. Climatologists are leveraging satellite lidar and thermal imaging to refine predictive extreme weather models.`,
-    keyFacts: [
-      'Real-time atmospheric lidar scanning from Earth orbit',
-      'Improves 14-day severe weather forecasting accuracy by 25%',
-      'Open satellite telemetry accessible to global climate researchers',
-    ],
-    rayuTakeaway: 'Space-based climate telemetry is essential infrastructure for planetary risk mitigation and agricultural planning.',
-    url: 'https://earthobservatory.nasa.gov',
-    source: 'NASA Earth Observatory',
-    category: 'WEATHER',
-    region: 'GLOBAL',
-    dateGroup: 'ARCHIVE',
-    publishedAt: '6 DAYS AGO',
-    readTime: '3 MIN READ',
-    badgeColor: '#00FF66',
-    imageUrl: 'https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?auto=format&fit=crop&w=1200&q=80',
   },
 ];
 
