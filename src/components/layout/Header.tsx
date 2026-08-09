@@ -76,25 +76,12 @@ export const Header: React.FC = () => {
 
           {/* Right Action Controls */}
           <div className="flex items-center gap-3">
-            {/* Version Switcher Badge */}
-            <div className="hidden md:flex items-center bg-[#0B0B0B] border border-white/15 p-1 rounded-sm text-[11px] font-mono">
-              <Link
-                href="/"
-                className={`px-2.5 py-1 rounded-sm transition-colors ${
-                  pathname === '/' ? 'bg-[#CCFF00] text-[#050505] font-bold' : 'text-neutral-400 hover:text-white'
-                }`}
-              >
-                V1 BASELINE
-              </Link>
-              <Link
-                href="/v2"
-                className={`px-2.5 py-1 rounded-sm transition-colors ${
-                  pathname === '/v2' ? 'bg-[#CCFF00] text-[#050505] font-bold' : 'text-neutral-400 hover:text-white'
-                }`}
-              >
-                V2 KINETIC
-              </Link>
-            </div>
+            <Link
+              href="/admin/studio"
+              className="hidden sm:inline-flex items-center gap-1.5 bg-[#0B0B0B] border border-white/20 text-[#CCFF00] text-xs font-mono font-bold uppercase tracking-wider px-3.5 py-2.5 rounded-sm hover:border-[#CCFF00] transition-colors"
+            >
+              <span>STUDIO</span>
+            </Link>
 
             <Link
               href="#subscribe"

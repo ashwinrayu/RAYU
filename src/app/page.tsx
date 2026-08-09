@@ -1,4 +1,4 @@
-import { Hero } from '@/components/home/Hero';
+import { HeroV2 } from '@/components/home/HeroV2';
 import { WhatIsRayu } from '@/components/home/WhatIsRayu';
 import { LatestThoughts } from '@/components/home/LatestThoughts';
 import { LiveNewsFeed } from '@/components/home/LiveNewsFeed';
@@ -10,7 +10,7 @@ import { NewsletterSection } from '@/components/home/NewsletterSection';
 export default function Home() {
   return (
     <>
-      <Hero />
+      <HeroV2 />
       <WhatIsRayu />
       <LatestThoughts />
       <LiveNewsFeed />
