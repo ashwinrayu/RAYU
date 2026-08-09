@@ -294,78 +294,80 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
   };
 
   return (
-    <div className="bg-[#0B0B0B] border border-white/10 p-6 md:p-8 rounded-sm text-white">
+    <div className="bg-[#0B0B0B] border border-white/10 p-3 sm:p-6 md:p-8 rounded-sm text-white">
       {/* Hybrid AI Background Art Generator Control Bar */}
-      <div className="mb-8 p-5 bg-[#050505] border border-[#CCFF00]/40 rounded-sm space-y-4 shadow-[0_0_25px_rgba(204,255,0,0.1)]">
-        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+      <div className="mb-6 p-4 sm:p-5 bg-[#050505] border border-[#CCFF00]/40 rounded-sm space-y-4 shadow-[0_0_25px_rgba(204,255,0,0.1)]">
+        <div className="flex flex-col gap-4">
+          {/* Header row */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded bg-[#CCFF00]/10 border border-[#CCFF00]/40 flex items-center justify-center text-[#CCFF00] shrink-0">
-              {isGeneratingAI ? <Loader2 size={20} className="animate-spin text-[#CCFF00]" /> : <Zap size={20} />}
+            <div className="w-9 h-9 rounded bg-[#CCFF00]/10 border border-[#CCFF00]/40 flex items-center justify-center text-[#CCFF00] shrink-0">
+              {isGeneratingAI ? <Loader2 size={18} className="animate-spin text-[#CCFF00]" /> : <Zap size={18} />}
             </div>
-            <div>
-              <div className="flex items-center gap-2 text-xs font-mono font-bold text-[#CCFF00] uppercase">
-                <Sparkles size={14} />
-                <span>2-STAGE AI VISUAL ENGINE: CONTENT ANALYSIS → IMAGE RENDER</span>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 text-[10px] sm:text-xs font-mono font-bold text-[#CCFF00] uppercase">
+                <Sparkles size={12} />
+                <span className="truncate">AI VISUAL ENGINE: ANALYZE → RENDER</span>
               </div>
-              <span className="text-xs font-mono text-neutral-400">
+              <span className="text-[10px] font-mono text-neutral-400 leading-snug">
                 {isGeneratingAI
                   ? generationStage === 'analyzing'
-                    ? `STAGE 1: GPT-4o READING STORY CONTENT... (${elapsedTimer}s)`
-                    : `STAGE 2: DALL-E 3 RENDERING IMAGE... (${elapsedTimer}s)`
+                    ? `READING STORY... (${elapsedTimer}s)`
+                    : `RENDERING IMAGE... (${elapsedTimer}s)`
                   : activeProvider
-                  ? `RENDERED BY ${activeProvider} IN ${generationTimeMs || 1.2}s • CONTENT-SPECIFIC AI VISUAL`
-                  : `ARTWORK READY IN ${generationTimeMs || 1.2}s`}
+                  ? `${activeProvider} · ${generationTimeMs || 1.2}s`
+                  : `READY IN ${generationTimeMs || 1.2}s`}
               </span>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            {/* AI Provider Switcher Toggle */}
-            <div className="flex items-center bg-[#090909] border border-white/15 rounded-sm p-1 text-xs font-mono">
+          {/* Controls row — scrollable on mobile */}
+          <div className="flex flex-wrap items-center gap-2 overflow-x-auto pb-1">
+            {/* AI Provider Switcher */}
+            <div className="flex items-center bg-[#090909] border border-white/15 rounded-sm p-0.5 text-[10px] sm:text-xs font-mono shrink-0">
               <button
                 onClick={() => setAiProvider('OPENAI')}
-                className={`px-3 py-1.5 rounded-sm font-bold uppercase transition-all ${
-                  aiProvider === 'OPENAI' ? 'bg-[#CCFF00] text-black shadow-[0_0_10px_rgba(204,255,0,0.4)]' : 'text-neutral-400 hover:text-white'
+                className={`px-2 sm:px-3 py-1.5 rounded-sm font-bold uppercase transition-all ${
+                  aiProvider === 'OPENAI' ? 'bg-[#CCFF00] text-black' : 'text-neutral-400 hover:text-white'
                 }`}
               >
-                OPENAI DALL·E 3
+                DALL·E
               </button>
               <button
                 onClick={() => setAiProvider('GEMINI')}
-                className={`px-3 py-1.5 rounded-sm font-bold uppercase transition-all ${
-                  aiProvider === 'GEMINI' ? 'bg-[#CCFF00] text-black shadow-[0_0_10px_rgba(204,255,0,0.4)]' : 'text-neutral-400 hover:text-white'
+                className={`px-2 sm:px-3 py-1.5 rounded-sm font-bold uppercase transition-all ${
+                  aiProvider === 'GEMINI' ? 'bg-[#CCFF00] text-black' : 'text-neutral-400 hover:text-white'
                 }`}
               >
-                GEMINI IMAGEN
+                GEMINI
               </button>
             </div>
 
-            {/* Negative Space Zone Selector */}
-            <div className="flex items-center bg-[#090909] border border-white/15 rounded-sm p-1 text-xs font-mono">
+            {/* Negative Space Zone */}
+            <div className="flex items-center bg-[#090909] border border-white/15 rounded-sm p-0.5 text-[10px] sm:text-xs font-mono shrink-0">
               <button
                 onClick={() => setNegativeZone('bottom')}
-                className={`px-2.5 py-1.5 rounded-sm uppercase ${
+                className={`px-2 sm:px-3 py-1.5 rounded-sm uppercase ${
                   negativeZone === 'bottom' ? 'bg-white/20 text-white font-bold' : 'text-neutral-500'
                 }`}
               >
-                BOTTOM SPACE
+                BOTTOM
               </button>
               <button
                 onClick={() => setNegativeZone('left')}
-                className={`px-2.5 py-1.5 rounded-sm uppercase ${
+                className={`px-2 sm:px-3 py-1.5 rounded-sm uppercase ${
                   negativeZone === 'left' ? 'bg-white/20 text-white font-bold' : 'text-neutral-500'
                 }`}
               >
-                LEFT SPACE
+                LEFT
               </button>
             </div>
 
             <button
               onClick={handleGenerateServerAiBackground}
               disabled={isGeneratingAI}
-              className="inline-flex items-center gap-2 text-xs font-mono font-bold bg-[#CCFF00] text-black hover:bg-[#b5e600] px-4 py-2.5 rounded-sm transition-colors uppercase cursor-pointer disabled:opacity-50 shrink-0"
+              className="inline-flex items-center gap-2 text-[10px] sm:text-xs font-mono font-bold bg-[#CCFF00] text-black hover:bg-[#b5e600] px-3 sm:px-4 py-2.5 rounded-sm transition-colors uppercase cursor-pointer disabled:opacity-50 shrink-0 w-full sm:w-auto justify-center"
             >
-              <RefreshCw size={14} className={isGeneratingAI ? 'animate-spin' : ''} />
+              <RefreshCw size={13} className={isGeneratingAI ? 'animate-spin' : ''} />
               <span>{isGeneratingAI ? `GENERATING (${elapsedTimer}s)...` : 'RE-ROLL AI ART 🎨'}</span>
             </button>
           </div>
@@ -457,57 +459,57 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
       </div>
 
       {/* Format Selection Bar */}
-      <div className="mb-8 border-b border-white/10 pb-6">
-        <span className="text-xs font-mono font-bold text-[#CCFF00] uppercase block mb-3">
-          CHOOSE SOCIAL MEDIA OUTPUT FORMAT:
+      <div className="mb-6 border-b border-white/10 pb-5">
+        <span className="text-[10px] sm:text-xs font-mono font-bold text-[#CCFF00] uppercase block mb-3">
+          OUTPUT FORMAT:
         </span>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 gap-2">
           <button
             onClick={() => setStudioFormat('single')}
-            className={`p-3.5 rounded-sm border text-left flex items-center gap-2.5 transition-all cursor-pointer ${
+            className={`p-2.5 sm:p-3.5 rounded-sm border text-left flex items-center gap-2 transition-all cursor-pointer ${
               studioFormat === 'single'
-                ? 'bg-[#CCFF00] text-black font-bold border-[#CCFF00] shadow-[0_0_15px_rgba(204,255,0,0.3)]'
+                ? 'bg-[#CCFF00] text-black font-bold border-[#CCFF00]'
                 : 'bg-[#050505] border-white/10 text-neutral-300 hover:border-white/30'
             }`}
           >
-            <LayoutGrid size={16} />
-            <span className="text-xs font-mono uppercase">📸 SINGLE POST CARD</span>
+            <LayoutGrid size={14} />
+            <span className="text-[10px] sm:text-xs font-mono uppercase">📸 SINGLE POST</span>
           </button>
 
           <button
             onClick={() => setStudioFormat('reels')}
-            className={`p-3.5 rounded-sm border text-left flex items-center gap-2.5 transition-all cursor-pointer ${
+            className={`p-2.5 sm:p-3.5 rounded-sm border text-left flex items-center gap-2 transition-all cursor-pointer ${
               studioFormat === 'reels'
-                ? 'bg-[#CCFF00] text-black font-bold border-[#CCFF00] shadow-[0_0_15px_rgba(204,255,0,0.3)]'
+                ? 'bg-[#CCFF00] text-black font-bold border-[#CCFF00]'
                 : 'bg-[#050505] border-white/10 text-neutral-300 hover:border-white/30'
             }`}
           >
-            <Film size={16} />
-            <span className="text-xs font-mono uppercase">🎬 AI REELS & VOICE</span>
+            <Film size={14} />
+            <span className="text-[10px] sm:text-xs font-mono uppercase">🎬 AI REELS</span>
           </button>
 
           <button
             onClick={() => setStudioFormat('carousel')}
-            className={`p-3.5 rounded-sm border text-left flex items-center gap-2.5 transition-all cursor-pointer ${
+            className={`p-2.5 sm:p-3.5 rounded-sm border text-left flex items-center gap-2 transition-all cursor-pointer ${
               studioFormat === 'carousel'
-                ? 'bg-[#CCFF00] text-black font-bold border-[#CCFF00] shadow-[0_0_15px_rgba(204,255,0,0.3)]'
+                ? 'bg-[#CCFF00] text-black font-bold border-[#CCFF00]'
                 : 'bg-[#050505] border-white/10 text-neutral-300 hover:border-white/30'
             }`}
           >
-            <Layers size={16} />
-            <span className="text-xs font-mono uppercase">🎡 5-SLIDE CAROUSEL</span>
+            <Layers size={14} />
+            <span className="text-[10px] sm:text-xs font-mono uppercase">🎡 CAROUSEL</span>
           </button>
 
           <button
             onClick={() => setStudioFormat('twitter')}
-            className={`p-3.5 rounded-sm border text-left flex items-center gap-2.5 transition-all cursor-pointer ${
+            className={`p-2.5 sm:p-3.5 rounded-sm border text-left flex items-center gap-2 transition-all cursor-pointer ${
               studioFormat === 'twitter'
-                ? 'bg-[#CCFF00] text-black font-bold border-[#CCFF00] shadow-[0_0_15px_rgba(204,255,0,0.3)]'
+                ? 'bg-[#CCFF00] text-black font-bold border-[#CCFF00]'
                 : 'bg-[#050505] border-white/10 text-neutral-300 hover:border-white/30'
             }`}
           >
-            <MessageSquare size={16} />
-            <span className="text-xs font-mono uppercase">🧵 TWITTER THREAD</span>
+            <MessageSquare size={14} />
+            <span className="text-[10px] sm:text-xs font-mono uppercase">🧵 THREAD</span>
           </button>
         </div>
       </div>
@@ -521,41 +523,41 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
       {studioFormat === 'single' && (
         <>
           {/* Studio Action Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 mb-6 border-b border-white/10">
+          <div className="flex flex-col gap-3 pb-5 mb-5 border-b border-white/10">
             <div>
-              <div className="flex items-center gap-2 text-xs font-mono font-bold text-[#CCFF00] uppercase mb-1">
-                <Sparkles size={14} />
-                <span>1080x1080 SINGLE POST GRAPHIC GENERATOR</span>
+              <div className="flex items-center gap-2 text-[10px] sm:text-xs font-mono font-bold text-[#CCFF00] uppercase mb-1">
+                <Sparkles size={12} />
+                <span>1080x1080 POST GENERATOR</span>
               </div>
-              <h3 className="text-xl font-bold uppercase tracking-tight">
+              <h3 className="text-lg sm:text-xl font-bold uppercase tracking-tight">
                 POST DESIGNER FOR @{INSTAGRAM_HANDLE}
               </h3>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2">
               <button
                 onClick={handleCopyCaption}
-                className="inline-flex items-center gap-2 text-xs font-mono font-bold bg-[#050505] border border-white/15 px-4 py-2.5 rounded-sm hover:border-[#CCFF00] text-white hover:text-[#CCFF00] transition-colors uppercase cursor-pointer"
+                className="inline-flex items-center justify-center gap-2 text-[10px] sm:text-xs font-mono font-bold bg-[#050505] border border-white/15 px-3 py-2.5 rounded-sm hover:border-[#CCFF00] text-white hover:text-[#CCFF00] transition-colors uppercase cursor-pointer"
               >
-                {copied ? <Check size={14} className="text-[#CCFF00]" /> : <Copy size={14} />}
-                <span>{copied ? 'CAPTION COPIED!' : 'COPY CAPTION'}</span>
+                {copied ? <Check size={13} className="text-[#CCFF00]" /> : <Copy size={13} />}
+                <span>{copied ? 'COPIED!' : 'COPY CAPTION'}</span>
               </button>
 
               <button
                 onClick={handleDownloadCard}
                 disabled={isDownloading}
-                className="inline-flex items-center gap-2 text-xs font-mono font-bold bg-[#050505] border border-white/15 px-4 py-2.5 rounded-sm hover:border-[#CCFF00] text-white hover:text-[#CCFF00] transition-colors uppercase cursor-pointer disabled:opacity-50"
+                className="inline-flex items-center justify-center gap-2 text-[10px] sm:text-xs font-mono font-bold bg-[#050505] border border-white/15 px-3 py-2.5 rounded-sm hover:border-[#CCFF00] text-white hover:text-[#CCFF00] transition-colors uppercase cursor-pointer disabled:opacity-50"
               >
-                {isDownloading ? <Loader2 size={14} className="animate-spin text-[#CCFF00]" /> : <Download size={14} />}
-                <span>{isDownloading ? 'EXPORTING 1080x1080 PNG...' : 'DOWNLOAD DESIGN PNG'}</span>
+                {isDownloading ? <Loader2 size={13} className="animate-spin text-[#CCFF00]" /> : <Download size={13} />}
+                <span>{isDownloading ? 'EXPORTING...' : 'DOWNLOAD PNG'}</span>
               </button>
 
               <button
                 onClick={handlePublishSimulated}
-                className="cta-element btn-sweep inline-flex items-center gap-2 bg-[#CCFF00] text-[#050505] text-xs font-bold uppercase tracking-wider px-5 py-2.5 rounded-sm hover:bg-[#b5e600] transition-colors cursor-pointer"
+                className="col-span-2 sm:col-span-1 cta-element btn-sweep inline-flex items-center justify-center gap-2 bg-[#CCFF00] text-[#050505] text-[10px] sm:text-xs font-bold uppercase tracking-wider px-4 py-2.5 rounded-sm hover:bg-[#b5e600] transition-colors cursor-pointer"
               >
-                {published ? <Check size={14} /> : <Share2 size={14} />}
-                <span>{published ? 'POSTED TO @THISISRAYU!' : 'PUBLISH TO INSTAGRAM'}</span>
+                {published ? <Check size={13} /> : <Share2 size={13} />}
+                <span>{published ? 'POSTED!' : 'PUBLISH TO INSTAGRAM'}</span>
               </button>
             </div>
           </div>

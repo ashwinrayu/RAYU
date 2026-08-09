@@ -195,31 +195,30 @@ export default function AdminStudioPage() {
 
   // Unlocked Studio View for Authenticated Creator
   return (
-    <div className="bg-[#050505] text-white pt-32 pb-24 min-h-screen">
-      <div className="max-w-7xl mx-auto px-6 md:px-12">
+    <div className="bg-[#050505] text-white pt-20 sm:pt-28 pb-16 min-h-screen">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 md:px-12">
         {/* Studio Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10 pb-6 border-b border-white/10">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-white/10">
           <div>
-            <div className="flex items-center gap-2 text-xs font-mono font-bold text-[#CCFF00] uppercase mb-1">
-              <Sparkles size={14} />
-              <span>RAYU CREATOR STUDIO • INSTAGRAM CROSS-PUBLISHER</span>
+            <div className="flex items-center gap-1.5 text-[10px] sm:text-xs font-mono font-bold text-[#CCFF00] uppercase mb-1">
+              <Sparkles size={12} />
+              <span>RAYU CREATOR STUDIO</span>
             </div>
-            <h1 className="text-3xl sm:text-5xl font-black uppercase tracking-tight">
+            <h1 className="text-2xl sm:text-4xl font-black uppercase tracking-tight">
               INSTAGRAM <span className="text-[#CCFF00]">POST STUDIO</span>
             </h1>
           </div>
 
-          <div className="flex items-center gap-4">
-            <div className="text-xs font-mono text-neutral-400">
-              AUTHENTICATED: <span className="text-[#CCFF00] font-bold">{user?.email || 'thisisrayu@gmail.com'}</span>
+          <div className="flex items-center gap-2 sm:gap-4">
+            <div className="text-[10px] sm:text-xs font-mono text-neutral-400 truncate max-w-[140px] sm:max-w-none">
+              <span className="text-[#CCFF00] font-bold">{user?.email?.split('@')[0] || 'thisisrayu'}</span>
             </div>
-
             <button
               onClick={handleLogout}
-              className="inline-flex items-center gap-2 text-xs font-mono font-bold bg-[#0B0B0B] border border-white/15 text-neutral-300 hover:text-red-400 hover:border-red-400/50 px-4 py-2 rounded-sm transition-colors uppercase cursor-pointer"
+              className="inline-flex items-center gap-1.5 text-[10px] sm:text-xs font-mono font-bold bg-[#0B0B0B] border border-white/15 text-neutral-300 hover:text-red-400 hover:border-red-400/50 px-3 py-2 rounded-sm transition-colors uppercase cursor-pointer shrink-0"
             >
-              <LogOut size={14} />
-              <span>LOCK & LOGOUT</span>
+              <LogOut size={13} />
+              <span>LOGOUT</span>
             </button>
           </div>
         </div>
@@ -228,29 +227,28 @@ export default function AdminStudioPage() {
         <CustomNewsUploader onCustomNewsCreated={handleCustomNewsCreated} />
 
         {/* Content Source Selection Bar */}
-        <div className="mb-8">
-          <span className="text-xs font-mono font-bold text-neutral-400 uppercase block mb-3">
-            OR SELECT EXISTING CONTENT SOURCE TO GENERATE INSTAGRAM POST FROM:
+        <div className="mb-6">
+          <span className="text-[10px] sm:text-xs font-mono font-bold text-neutral-400 uppercase block mb-2">
+            SELECT CONTENT SOURCE:
           </span>
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+          <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
             <button
               onClick={() => {
                 setActiveSource('CUSTOM');
                 if (customStories.length > 0) setSelectedStory(customStories[0]);
               }}
-              className={`p-4 rounded-sm border text-left flex items-center justify-between transition-all cursor-pointer ${
+              className={`p-2.5 sm:p-4 rounded-sm border text-left flex items-center justify-between transition-all cursor-pointer ${
                 activeSource === 'CUSTOM'
-                  ? 'bg-[#CCFF00] text-black font-bold border-[#CCFF00] shadow-[0_0_15px_rgba(204,255,0,0.3)]'
+                  ? 'bg-[#CCFF00] text-black font-bold border-[#CCFF00]'
                   : 'bg-[#0B0B0B] border-white/10 text-neutral-300 hover:border-white/30'
               }`}
             >
-              <div className="flex items-center gap-2 text-xs font-mono uppercase">
-                <PlusCircle size={16} />
-                <span>➕ CUSTOM UPLOADS</span>
+              <div className="flex items-center gap-1.5 text-[10px] sm:text-xs font-mono uppercase">
+                <PlusCircle size={13} />
+                <span className="hidden sm:inline">CUSTOM</span>
+                <span className="sm:hidden">+</span>
               </div>
-              <span className="text-[10px] font-mono border px-2 py-0.5 rounded-sm">
-                {customStories.length}
-              </span>
+              <span className="text-[10px] font-mono border px-1.5 py-0.5 rounded-sm">{customStories.length}</span>
             </button>
 
             <button
@@ -258,19 +256,17 @@ export default function AdminStudioPage() {
                 setActiveSource('NEWS');
                 setSelectedStory(OMNI_NEWS_DATA[0]);
               }}
-              className={`p-4 rounded-sm border text-left flex items-center justify-between transition-all cursor-pointer ${
+              className={`p-2.5 sm:p-4 rounded-sm border text-left flex items-center justify-between transition-all cursor-pointer ${
                 activeSource === 'NEWS'
-                  ? 'bg-[#CCFF00] text-black font-bold border-[#CCFF00] shadow-[0_0_15px_rgba(204,255,0,0.3)]'
+                  ? 'bg-[#CCFF00] text-black font-bold border-[#CCFF00]'
                   : 'bg-[#0B0B0B] border-white/10 text-neutral-300 hover:border-white/30'
               }`}
             >
-              <div className="flex items-center gap-2 text-xs font-mono uppercase">
-                <Radio size={16} />
-                <span>⚡ LIVE STREAM</span>
+              <div className="flex items-center gap-1.5 text-[10px] sm:text-xs font-mono uppercase">
+                <Radio size={13} />
+                <span>NEWS</span>
               </div>
-              <span className="text-[10px] font-mono border px-2 py-0.5 rounded-sm">
-                {OMNI_NEWS_DATA.length}
-              </span>
+              <span className="text-[10px] font-mono border px-1.5 py-0.5 rounded-sm">{OMNI_NEWS_DATA.length}</span>
             </button>
 
             <button
@@ -278,19 +274,18 @@ export default function AdminStudioPage() {
                 setActiveSource('ARTICLES');
                 setSelectedStory(articleItems[0]);
               }}
-              className={`p-4 rounded-sm border text-left flex items-center justify-between transition-all cursor-pointer ${
+              className={`p-2.5 sm:p-4 rounded-sm border text-left flex items-center justify-between transition-all cursor-pointer ${
                 activeSource === 'ARTICLES'
-                  ? 'bg-[#CCFF00] text-black font-bold border-[#CCFF00] shadow-[0_0_15px_rgba(204,255,0,0.3)]'
+                  ? 'bg-[#CCFF00] text-black font-bold border-[#CCFF00]'
                   : 'bg-[#0B0B0B] border-white/10 text-neutral-300 hover:border-white/30'
               }`}
             >
-              <div className="flex items-center gap-2 text-xs font-mono uppercase">
-                <Newspaper size={16} />
-                <span>📰 ARTICLES</span>
+              <div className="flex items-center gap-1.5 text-[10px] sm:text-xs font-mono uppercase">
+                <Newspaper size={13} />
+                <span className="hidden sm:inline">ARTICLES</span>
+                <span className="sm:hidden">ART.</span>
               </div>
-              <span className="text-[10px] font-mono border px-2 py-0.5 rounded-sm">
-                {articleItems.length}
-              </span>
+              <span className="text-[10px] font-mono border px-1.5 py-0.5 rounded-sm">{articleItems.length}</span>
             </button>
 
             <button
@@ -298,19 +293,18 @@ export default function AdminStudioPage() {
                 setActiveSource('THOUGHTS');
                 setSelectedStory(thoughtItems[0]);
               }}
-              className={`p-4 rounded-sm border text-left flex items-center justify-between transition-all cursor-pointer ${
+              className={`p-2.5 sm:p-4 rounded-sm border text-left flex items-center justify-between transition-all cursor-pointer ${
                 activeSource === 'THOUGHTS'
-                  ? 'bg-[#CCFF00] text-black font-bold border-[#CCFF00] shadow-[0_0_15px_rgba(204,255,0,0.3)]'
+                  ? 'bg-[#CCFF00] text-black font-bold border-[#CCFF00]'
                   : 'bg-[#0B0B0B] border-white/10 text-neutral-300 hover:border-white/30'
               }`}
             >
-              <div className="flex items-center gap-2 text-xs font-mono uppercase">
-                <MessageSquare size={16} />
-                <span>💭 THOUGHTS</span>
+              <div className="flex items-center gap-1.5 text-[10px] sm:text-xs font-mono uppercase">
+                <MessageSquare size={13} />
+                <span className="hidden sm:inline">THOUGHTS</span>
+                <span className="sm:hidden">THT.</span>
               </div>
-              <span className="text-[10px] font-mono border px-2 py-0.5 rounded-sm">
-                {thoughtItems.length}
-              </span>
+              <span className="text-[10px] font-mono border px-1.5 py-0.5 rounded-sm">{thoughtItems.length}</span>
             </button>
 
             <button
@@ -318,47 +312,45 @@ export default function AdminStudioPage() {
                 setActiveSource('RESOURCES');
                 setSelectedStory(resourceItems[0]);
               }}
-              className={`p-4 rounded-sm border text-left flex items-center justify-between transition-all cursor-pointer ${
+              className={`p-2.5 sm:p-4 rounded-sm border text-left flex items-center justify-between transition-all cursor-pointer ${
                 activeSource === 'RESOURCES'
-                  ? 'bg-[#CCFF00] text-black font-bold border-[#CCFF00] shadow-[0_0_15px_rgba(204,255,0,0.3)]'
+                  ? 'bg-[#CCFF00] text-black font-bold border-[#CCFF00]'
                   : 'bg-[#0B0B0B] border-white/10 text-neutral-300 hover:border-white/30'
               }`}
             >
-              <div className="flex items-center gap-2 text-xs font-mono uppercase">
-                <Wrench size={16} />
-                <span>🛠️ RESOURCES</span>
+              <div className="flex items-center gap-1.5 text-[10px] sm:text-xs font-mono uppercase">
+                <Wrench size={13} />
+                <span className="hidden sm:inline">RESOURCES</span>
+                <span className="sm:hidden">RES.</span>
               </div>
-              <span className="text-[10px] font-mono border px-2 py-0.5 rounded-sm">
-                {resourceItems.length}
-              </span>
+              <span className="text-[10px] font-mono border px-1.5 py-0.5 rounded-sm">{resourceItems.length}</span>
             </button>
           </div>
         </div>
 
         {/* Story Selector Grid */}
-        <div className="mb-10">
-          <span className="text-xs font-mono font-bold text-neutral-400 uppercase block mb-4">
-            SELECT AN ITEM FROM {activeSource} TO GENERATE INSTAGRAM POST & CAPTION FOR @THISISRAYU:
+        <div className="mb-6">
+          <span className="text-[10px] sm:text-xs font-mono font-bold text-neutral-400 uppercase block mb-2">
+            SELECT STORY:
           </span>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
             {currentItemsList.map((item) => {
               const isSelected = selectedStory.id === item.id;
               return (
                 <button
                   key={item.id}
                   onClick={() => setSelectedStory(item)}
-                  className={`text-left p-4 rounded-sm border transition-all cursor-pointer ${
+                  className={`text-left p-3 rounded-sm border transition-all cursor-pointer ${
                     isSelected
-                      ? 'bg-[#CCFF00]/10 border-[#CCFF00] text-white shadow-[0_0_15px_rgba(204,255,0,0.2)]'
+                      ? 'bg-[#CCFF00]/10 border-[#CCFF00] text-white shadow-[0_0_10px_rgba(204,255,0,0.15)]'
                       : 'bg-[#0B0B0B] border-white/10 text-neutral-300 hover:border-white/30'
                   }`}
                 >
-                  <div className="flex items-center justify-between text-[10px] font-mono mb-2">
+                  <div className="flex items-center justify-between text-[9px] sm:text-[10px] font-mono mb-1.5">
                     <span className="text-[#CCFF00] font-bold">[{item.category}]</span>
-                    {isSelected && <CheckCircle2 size={12} className="text-[#CCFF00]" />}
+                    {isSelected && <CheckCircle2 size={11} className="text-[#CCFF00]" />}
                   </div>
-                  <h4 className="text-xs font-bold uppercase line-clamp-2 leading-snug">
+                  <h4 className="text-[10px] sm:text-xs font-bold uppercase line-clamp-2 leading-snug">
                     {item.title}
                   </h4>
                 </button>
