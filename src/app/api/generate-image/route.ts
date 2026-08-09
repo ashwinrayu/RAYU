@@ -2,20 +2,46 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export const runtime = 'nodejs';
 
+/**
+ * Content-Specific Visual Subject Synthesizer
+ * Extracts exact physical subject matter from story content for AI art generation
+ */
+function extractContentSubject(title: string = '', summary: string = '', category: string = ''): string {
+  const text = `${title} ${summary} ${category}`.toLowerCase();
+
+  if (text.includes('gta') || text.includes('vice city') || text.includes('rockstar')) {
+    return 'a high-performance supercar driving down a Vice City tropical palm tree avenue at night with neon lights and ocean coast reflection';
+  } else if (text.includes('python') || text.includes('bot') || text.includes('telegram') || text.includes('whatsapp')) {
+    return 'a high-tech developer workstation laptop screen displaying glowing green Python code syntax and automation node networks in a dark cyber room';
+  } else if (text.includes('semiconductor') || text.includes('chip') || text.includes('fab') || text.includes('silicon')) {
+    return 'an intricate silicon microchip wafer held inside a futuristic semiconductor cleanroom manufacturing plant with robotic arms and laser precision';
+  } else if (text.includes('isro') || text.includes('space') || text.includes('rocket') || text.includes('launch')) {
+    return 'a futuristic spacecraft launch vehicle landing at a coastal spaceport station during a dramatic sunset ocean launch';
+  } else if (text.includes('llm') || text.includes('ai') || text.includes('ollama') || text.includes('model')) {
+    return 'a glowing artificial intelligence neural network core with holographic data streams and quantum processing matrix';
+  } else if (text.includes('war') || text.includes('cyber') || text.includes('defense') || text.includes('radar')) {
+    return 'a high-tech global cyber defense operation center with holographic world map radars, fiber optic cables, and glowing surveillance streams';
+  } else if (text.includes('economy') || text.includes('bank') || text.includes('market') || text.includes('upi')) {
+    return 'a sleek financial trading floor screen showing real-time digital currency graphs, candlestick charts, and glowing global trade networks';
+  } else {
+    return `a dramatic cinematic digital artwork representing ${title.slice(0, 70)}`;
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { title, category, summary, provider = 'OPENAI', layout = 'bottom' } = await req.json();
 
-    const topic = (title || summary || category || 'artificial intelligence').slice(0, 100);
+    const specificSubject = extractContentSubject(title, summary, category);
     const negativeZone = layout === 'left' ? 'left' : 'bottom';
 
-    // Locked Style Prompt Template for Brand Consistency
-    const basePrompt = `A striking, editorial-style abstract background image, dark charcoal (#050505) base tone, with a single vivid lime-green (#CCFF00) accent light/glow/particle element related to the theme of "${topic}". Minimal, high-contrast, moody, premium digital art style — think abstract data visualization or light-trail photography, not literal illustration, not cartoon, not stock-photo style. Leave the ${negativeZone} third of the frame as clean, uncluttered negative space with no important visual detail, for text overlay. No text, no words, no letters, no typography in the image itself. 1:1 square composition. Cinematic lighting, subtle grain texture.`;
+    // Content-Specific Locked Brand Prompt Template
+    const basePrompt = `A striking, premium editorial-style photograph/digital art of ${specificSubject}. Dark charcoal (#050505) atmosphere, illuminated with vivid cyber lime-green (#CCFF00) ambient lighting and accent highlights. High-contrast, moody, cinematic lighting, 8k resolution, highly detailed photorealistic render. Leave the ${negativeZone} third of the frame as clean, uncluttered negative space for text overlay. No text, no words, no letters, no typography in the image itself. 1:1 square composition.`;
 
     const openAiKey = process.env.OPENAI_API_KEY;
     const geminiKey = process.env.GEMINI_API_KEY;
 
-    // 1. OPENAI DALL·E 3 PROVIDER (Using b64_json to prevent CORS & broken image links)
+    // 1. OPENAI DALL·E 3 PROVIDER (Base64 payload)
     if (provider === 'OPENAI' && openAiKey) {
       try {
         const openAiRes = await fetch('https://api.openai.com/v1/images/generations', {
@@ -54,7 +80,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 2. GOOGLE GEMINI IMAGEN PROVIDER (Using Base64 payload)
+    // 2. GOOGLE GEMINI IMAGEN PROVIDER (Base64 payload)
     if (provider === 'GEMINI' && geminiKey) {
       try {
         const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${geminiKey.trim()}`, {
@@ -86,7 +112,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 3. RELIABLE LOCAL GENERATIVE BASE64 FALLBACK
+    // 3. FALLBACK CONTENT-SPECIFIC GENERATIVE VISUAL
     const seed = Math.floor(Math.random() * 100000);
     const fallbackUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(basePrompt)}?width=1080&height=1080&nologo=true&seed=${seed}`;
 
@@ -95,7 +121,6 @@ export async function POST(req: NextRequest) {
       provider: openAiKey ? 'OPENAI' : geminiKey ? 'GEMINI' : 'RAYU_AI_ENGINE',
       imageUrl: fallbackUrl,
       promptUsed: basePrompt,
-      notice: (!openAiKey && !geminiKey) ? 'Check API key quotas in OpenAI / Gemini dashboard.' : undefined,
     });
   } catch (error) {
     return NextResponse.json(
