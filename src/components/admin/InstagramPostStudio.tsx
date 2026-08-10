@@ -66,7 +66,6 @@ export const InstagramPostStudio: React.FC<Props> = ({ newsItem, postContent }) 
   const [elapsedTimer, setElapsedTimer] = useState(0);
   const [generationTimeMs, setGenerationTimeMs] = useState<number | null>(null);
   const [apiNotice, setApiNotice] = useState<string | null>(null);
-  const [customImageUrl, setCustomImageUrl] = useState<string | null>(null);
   const [activePrompt, setActivePrompt] = useState<string | null>(null);
   const [activeProvider, setActiveProvider] = useState<string | null>(null);
   const cardRef = useRef<HTMLDivElement | null>(null);
@@ -85,14 +84,26 @@ export const InstagramPostStudio: React.FC<Props> = ({ newsItem, postContent }) 
   }, [itemTitle, itemSummary, itemTakeaway]);
 
   // Custom image upload state
-  const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
-  const [isDragOver, setIsDragOver] = useState(false);
-  const [imageSource, setImageSource] = useState<'ai' | 'upload'>('ai');
+  const initialImage = postContent?.sourceImage || newsItem?.imageUrl || null;
+  const isUploadedImage = initialImage ? initialImage.startsWith('data:') : false;
 
-  // Auto-generate AI background on story change
+  const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(isUploadedImage ? initialImage : null);
+  const [customImageUrl, setCustomImageUrl] = useState<string | null>(initialImage);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [imageSource, setImageSource] = useState<'ai' | 'upload'>(isUploadedImage ? 'upload' : 'ai');
+
+  // Preserve uploaded image on item change
   useEffect(() => {
-    handleGenerateServerAiBackground();
-  }, [itemTitle, itemCategory, aiProvider, negativeZone]);
+    const srcImg = postContent?.sourceImage || newsItem?.imageUrl;
+    if (srcImg && srcImg.startsWith('data:')) {
+      setUploadedImageUrl(srcImg);
+      setCustomImageUrl(srcImg);
+      setImageSource('upload');
+      setImageLoaded(true);
+    } else if (imageSource === 'ai') {
+      handleGenerateServerAiBackground();
+    }
+  }, [itemTitle, itemCategory, postContent?.sourceImage, aiProvider, negativeZone]);
 
   // Elapsed timer tracking
   useEffect(() => {
