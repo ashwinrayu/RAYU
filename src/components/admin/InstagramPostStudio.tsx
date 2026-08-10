@@ -59,7 +59,7 @@ export const InstagramPostStudio: React.FC<Props> = ({ newsItem, postContent }) 
   const [aspectRatio, setAspectRatio] = useState<'1:1' | '4:5'>(postContent?.aspectRatio || '1:1');
 
   // Hybrid AI Generator Controls
-  const [aiProvider, setAiProvider] = useState<'OPENAI' | 'GEMINI' | 'AUTO'>('OPENAI');
+  const [aiProvider, setAiProvider] = useState<'OPENAI' | 'GEMINI' | 'AUTO'>('AUTO');
   const [negativeZone, setNegativeZone] = useState<'bottom' | 'left'>('bottom');
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
   const [generationStage, setGenerationStage] = useState<'idle' | 'analyzing' | 'rendering'>('idle');
