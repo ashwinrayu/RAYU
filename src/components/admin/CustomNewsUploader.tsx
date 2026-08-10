@@ -82,9 +82,10 @@ export const CustomNewsUploader: React.FC<Props> = ({ onCustomNewsCreated }) => 
 
     let finalTitle = title.trim();
     if (!finalTitle) {
-      if (newsUrl) finalTitle = `News Link: ${newsUrl.slice(0, 40)}...`;
-      else if (rawTextContent) finalTitle = rawTextContent.slice(0, 55) + '...';
-      else finalTitle = 'Custom Creator News Entry';
+      if (newsUrl) finalTitle = `NEWS LINK: ${newsUrl.replace(/https?:\/\//, '').slice(0, 40).toUpperCase()}`;
+      else if (rawTextContent) finalTitle = rawTextContent.slice(0, 55).toUpperCase() + '...';
+      else if (imagePreview) finalTitle = 'IDENTIFIED SCREENSHOT GRAPHIC';
+      else finalTitle = 'CREATOR UPLOADED GRAPHIC';
     }
 
     let finalSummary = summary.trim();

@@ -43,6 +43,18 @@ export const InstagramPostStudio: React.FC<Props> = ({ newsItem }) => {
   const cardRef = useRef<HTMLDivElement | null>(null);
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
 
+  // Live Editable Text Overlay Controls
+  const [editableTitle, setEditableTitle] = useState<string>(newsItem.title);
+  const [editableSummary, setEditableSummary] = useState<string>(newsItem.summary);
+  const [editableTakeaway, setEditableTakeaway] = useState<string>(newsItem.rayuTakeaway || '');
+
+  // Reset editable text whenever newsItem changes
+  useEffect(() => {
+    setEditableTitle(newsItem.title);
+    setEditableSummary(newsItem.summary);
+    setEditableTakeaway(newsItem.rayuTakeaway || '');
+  }, [newsItem.id, newsItem.title, newsItem.summary]);
+
   // Custom image upload state
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -124,13 +136,34 @@ export const InstagramPostStudio: React.FC<Props> = ({ newsItem }) => {
   const handleImageUpload = (file: File) => {
     if (!file.type.startsWith('image/')) return;
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       const dataUrl = e.target?.result as string;
       setUploadedImageUrl(dataUrl);
       setCustomImageUrl(dataUrl);
       setImageSource('upload');
       setImageLoaded(true); // Mark loaded immediately for uploaded data URLs
       setImageLoadError(null);
+
+      // Trigger OCR & AI visual analysis on the uploaded image
+      try {
+        setApiNotice('⚡ AI ANALYZING UPLOADED IMAGE CONTENT & TEXT...');
+        const res = await fetch('/api/analyze-image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ imageBase64: dataUrl }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.title) {
+            setEditableTitle(data.title);
+            if (data.summary) setEditableSummary(data.summary);
+            if (data.rayuTakeaway) setEditableTakeaway(data.rayuTakeaway);
+            setApiNotice(`✅ AI EXTRACTED HEADLINE: "${data.title}"`);
+          }
+        }
+      } catch (err) {
+        console.warn('OCR error during upload:', err);
+      }
     };
     reader.readAsDataURL(file);
   };
@@ -291,9 +324,12 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
     }
   };
 
-  // Clone newsItem with active AI background
+  // Clone newsItem with active AI background & live editable text
   const dynamicNewsItem: OmniNewsItem = {
     ...newsItem,
+    title: editableTitle.trim() || newsItem.title,
+    summary: editableSummary.trim() || newsItem.summary,
+    rayuTakeaway: editableTakeaway.trim() || newsItem.rayuTakeaway,
     imageUrl: activeDisplayImage,
   };
 
@@ -474,6 +510,44 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
               </div>
             </div>
           )}
+        </div>
+
+        {/* Live Editable Text Overlay Controller */}
+        <div className="border-t border-white/10 pt-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-mono font-bold text-[#CCFF00] uppercase flex items-center gap-1.5">
+              <Sparkles size={11} />
+              <span>LIVE CARD TEXT CONTROLLER (EDIT HEADLINE & OVERLAY REAL-TIME):</span>
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+            <div className="sm:col-span-6">
+              <label className="block text-[9px] font-mono text-neutral-400 uppercase mb-1">
+                CARD HEADLINE / TITLE:
+              </label>
+              <input
+                type="text"
+                value={editableTitle}
+                onChange={(e) => setEditableTitle(e.target.value)}
+                placeholder="Enter headline..."
+                className="w-full bg-[#050505] border border-white/20 focus:border-[#CCFF00] px-3 py-2 text-xs font-bold text-white rounded-sm outline-none font-mono uppercase"
+              />
+            </div>
+
+            <div className="sm:col-span-6">
+              <label className="block text-[9px] font-mono text-neutral-400 uppercase mb-1">
+                CARD SUBTITLE / SUMMARY:
+              </label>
+              <input
+                type="text"
+                value={editableSummary}
+                onChange={(e) => setEditableSummary(e.target.value)}
+                placeholder="Enter summary..."
+                className="w-full bg-[#050505] border border-white/20 focus:border-[#CCFF00] px-3 py-2 text-xs text-neutral-300 rounded-sm outline-none font-mono"
+              />
+            </div>
+          </div>
         </div>
 
         {apiNotice && (
