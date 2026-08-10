@@ -37,6 +37,7 @@ async function buildPromptWithGroq(
       'Content-Type': 'application/json',
       Authorization: `Bearer ${groqKey}`,
     },
+    signal: AbortSignal.timeout(3500),
     body: JSON.stringify({
       model: 'llama-3.1-8b-instant',
       messages: [
@@ -54,7 +55,7 @@ Your task:
           content: `Content to Analyze & Re-create Visual For:\n${contextDetails}\n\nRe-created Visual Scene Description:`,
         },
       ],
-      max_tokens: 200,
+      max_tokens: 120,
       temperature: 0.7,
     }),
   });
@@ -196,19 +197,13 @@ async function generateWithHuggingFace(
 async function generateWithPollinations(
   prompt: string
 ): Promise<{ imageUrl: string }> {
-  console.log('[RAYU AI API] Calling Pollinations AI Flux...');
+  console.log('[RAYU AI API] Instantly constructing Pollinations AI Flux URL...');
   const seed = Math.floor(Math.random() * 999999);
-  const encoded = encodeURIComponent(prompt);
+  // Keep prompt concise and clean for URL encoding
+  const cleanPrompt = prompt.slice(0, 250).replace(/[^\w\s,.-]/g, '');
+  const encoded = encodeURIComponent(cleanPrompt);
   const imageUrl = `https://image.pollinations.ai/prompt/${encoded}?width=1080&height=1080&nologo=true&seed=${seed}&model=flux`;
   
-  // Verify Pollinations endpoint is responding with 200
-  const checkRes = await fetch(imageUrl, { method: 'HEAD' });
-  console.log(`[RAYU AI API] Pollinations HEAD Status: ${checkRes.status}`);
-  
-  if (!checkRes.ok) {
-    throw new Error(`Pollinations AI endpoint returned HTTP ${checkRes.status}`);
-  }
-
   return { imageUrl };
 }
 
