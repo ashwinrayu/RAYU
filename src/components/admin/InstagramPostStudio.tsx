@@ -313,8 +313,7 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
     setIsDownloading(true);
 
     try {
-      // Step 1: If the background image is an external URL (Pollinations/etc),
-      // fetch it and convert to base64 first to avoid canvas CORS taint
+      // Step 1: If background image is external HTTP URL, proxy it to base64
       let resolvedImageUrl = activeDisplayImage;
 
       if (
@@ -330,37 +329,27 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
             const { dataUrl } = await proxyRes.json();
             if (dataUrl) resolvedImageUrl = dataUrl;
           }
-        } catch {
-          // If proxy fails, try direct fetch
-          try {
-            const imgRes = await fetch(activeDisplayImage);
-            const blob = await imgRes.blob();
-            resolvedImageUrl = await new Promise<string>((resolve) => {
-              const reader = new FileReader();
-              reader.onloadend = () => resolve(reader.result as string);
-              reader.readAsDataURL(blob);
-            });
-          } catch {
-            // Keep original URL and hope html-to-image handles it
-          }
+        } catch (e) {
+          console.warn('[RAYU Studio] Image proxy warning:', e);
         }
       }
 
-      // Step 2: Temporarily swap image src to resolved base64 for clean export
+      // Step 2: Temporarily swap image src to base64 dataUrl if needed
       const imgEl = cardRef.current.querySelector('img') as HTMLImageElement | null;
       const originalSrc = imgEl?.src;
-      if (imgEl && resolvedImageUrl !== activeDisplayImage) {
+      if (imgEl && resolvedImageUrl && resolvedImageUrl !== originalSrc) {
         imgEl.src = resolvedImageUrl;
-        // Give browser time to render the new src
-        await new Promise((r) => setTimeout(r, 300));
+        await new Promise((r) => setTimeout(r, 200));
       }
 
-      // Step 3: Export card as PNG
+      // Step 3: Export card as PNG using html-to-image
+      // IMPORTANT: cacheBust must be FALSE so data: base64 URLs are not corrupted with query params!
       const pngDataUrl = await toPng(cardRef.current, {
         quality: 1.0,
-        pixelRatio: 3,
-        cacheBust: true,
-        skipFonts: false,
+        pixelRatio: 2,
+        cacheBust: false,
+        skipFonts: true,
+        fontEmbedCSS: '',
       });
 
       // Step 4: Restore original src
@@ -368,30 +357,127 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
 
       // Step 5: Trigger download
       const link = document.createElement('a');
-      link.download = `rayu-post-${selectedTemplate}-${safeNewsItem.id}.png`;
+      link.download = `rayu-post-${selectedTemplate}-${safeNewsItem.id || 'export'}.png`;
       link.href = pngDataUrl;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
 
     } catch (err) {
-      console.error('Download failed:', err);
-      // Last resort: try downloading the background image directly
-      if (activeDisplayImage) {
-        try {
-          const res = await fetch(activeDisplayImage);
-          const blob = await res.blob();
-          const blobUrl = URL.createObjectURL(blob);
+      console.error('[RAYU Studio] html-to-image export failed, running 2D Canvas fallback:', err);
+      try {
+        // High-fidelity HTML5 2D Canvas fallback
+        const canvas = document.createElement('canvas');
+        canvas.width = 1080;
+        canvas.height = 1080;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          // Fill background
+          ctx.fillStyle = '#050505';
+          ctx.fillRect(0, 0, 1080, 1080);
+
+          // Draw background image if available
+          if (activeDisplayImage) {
+            await new Promise<void>((resolve) => {
+              const img = new Image();
+              img.crossOrigin = 'anonymous';
+              img.onload = () => {
+                const scale = Math.max(1080 / img.width, 1080 / img.height);
+                const x = (1080 - img.width * scale) / 2;
+                const y = (1080 - img.height * scale) / 2;
+                ctx.globalAlpha = 0.4;
+                ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+                ctx.globalAlpha = 1.0;
+                resolve();
+              };
+              img.onerror = () => resolve();
+              img.src = activeDisplayImage;
+            });
+          }
+
+          // Dark overlay gradient
+          const grad = ctx.createLinearGradient(0, 0, 0, 1080);
+          grad.addColorStop(0, 'rgba(5, 5, 5, 0.7)');
+          grad.addColorStop(0.5, 'rgba(5, 5, 5, 0.4)');
+          grad.addColorStop(1, 'rgba(5, 5, 5, 0.95)');
+          ctx.fillStyle = grad;
+          ctx.fillRect(0, 0, 1080, 1080);
+
+          // Border
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+          ctx.lineWidth = 4;
+          ctx.strokeRect(30, 30, 1020, 1020);
+
+          // RAYU logo header
+          ctx.fillStyle = '#FFFFFF';
+          ctx.font = '900 48px sans-serif';
+          ctx.fillText('RAY', 70, 110);
+          const rayW = ctx.measureText('RAY').width;
+          ctx.fillStyle = '#CCFF00';
+          ctx.fillText('U.', 70 + rayW, 110);
+
+          // Category badge
+          ctx.fillStyle = '#CCFF00';
+          ctx.fillRect(780, 70, 230, 48);
+          ctx.fillStyle = '#000000';
+          ctx.font = '700 20px monospace';
+          ctx.fillText(`[${(dynamicNewsItem.category || 'TECH').toUpperCase()}]`, 800, 102);
+
+          // Live Awareness tag
+          ctx.fillStyle = '#CCFF00';
+          ctx.font = '700 22px monospace';
+          ctx.fillText(`● LIVE AWARENESS • ${dynamicNewsItem.region || 'GLOBAL'}`, 70, 340);
+
+          // Title wrapping
+          ctx.fillStyle = '#FFFFFF';
+          ctx.font = '900 48px sans-serif';
+          const titleWords = (dynamicNewsItem.title || '').toUpperCase().split(' ');
+          let lineStr = '';
+          let textY = 420;
+          for (let n = 0; n < titleWords.length; n++) {
+            const testLine = lineStr + titleWords[n] + ' ';
+            if (ctx.measureText(testLine).width > 940 && n > 0) {
+              ctx.fillText(lineStr, 70, textY);
+              lineStr = titleWords[n] + ' ';
+              textY += 60;
+            } else {
+              lineStr = testLine;
+            }
+          }
+          ctx.fillText(lineStr, 70, textY);
+
+          // Summary box
+          textY += 40;
+          ctx.fillStyle = 'rgba(15, 15, 15, 0.9)';
+          ctx.fillRect(70, textY, 940, 160);
+          ctx.strokeStyle = 'rgba(204, 255, 0, 0.3)';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(70, textY, 940, 160);
+
+          ctx.fillStyle = '#E5E5E5';
+          ctx.font = '400 24px sans-serif';
+          const summaryStr = dynamicNewsItem.rayuTakeaway || dynamicNewsItem.summary || '';
+          ctx.fillText(summaryStr.slice(0, 110) + (summaryStr.length > 110 ? '...' : ''), 95, textY + 60);
+
+          // Footer
+          ctx.fillStyle = '#CCFF00';
+          ctx.font = '700 22px monospace';
+          ctx.fillText('@THISISRAYU', 70, 1010);
+          ctx.fillStyle = '#A3A3A3';
+          ctx.fillText('RAYU-360.VERCEL.APP', 710, 1010);
+
+          // Export & download
+          const fallbackPng = canvas.toDataURL('image/png');
           const link = document.createElement('a');
-          link.download = `rayu-post-${safeNewsItem.id}.jpg`;
-          link.href = blobUrl;
+          link.download = `rayu-post-${selectedTemplate}-${safeNewsItem.id || 'export'}.png`;
+          link.href = fallbackPng;
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
-          URL.revokeObjectURL(blobUrl);
-        } catch {
-          alert('Download failed. Please try right-clicking the image and saving it manually.');
         }
+      } catch (fallbackErr) {
+        console.error('[RAYU Studio] Canvas fallback failed:', fallbackErr);
+        alert('Download failed. Please right-click the card image to save manually.');
       }
     } finally {
       setIsDownloading(false);

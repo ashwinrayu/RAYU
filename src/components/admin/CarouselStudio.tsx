@@ -97,7 +97,7 @@ export const CarouselStudio: React.FC<Props> = ({ newsItem, postContent }) => {
     if (!slideRef.current) return;
     setIsExporting(true);
     try {
-      const dataUrl = await toPng(slideRef.current, { quality: 1.0, pixelRatio: 3, cacheBust: true });
+      const dataUrl = await toPng(slideRef.current, { quality: 1.0, pixelRatio: 2, cacheBust: false, skipFonts: true, fontEmbedCSS: '' });
       const link = document.createElement('a');
       link.download = `rayu-carousel-slide-${activeSlideIndex + 1}.png`;
       link.href = dataUrl;
@@ -117,7 +117,7 @@ export const CarouselStudio: React.FC<Props> = ({ newsItem, postContent }) => {
         setActiveSlideIndex(i);
         // Wait for slide to re-render in DOM
         await new Promise((r) => setTimeout(r, 400));
-        const dataUrl = await toPng(slideRef.current, { quality: 1.0, pixelRatio: 3, cacheBust: true });
+        const dataUrl = await toPng(slideRef.current, { quality: 1.0, pixelRatio: 2, cacheBust: false, skipFonts: true, fontEmbedCSS: '' });
         const link = document.createElement('a');
         link.download = `rayu-carousel-slide-${i + 1}-of-${slides.length}.png`;
         link.href = dataUrl;
