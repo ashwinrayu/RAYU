@@ -65,16 +65,18 @@ export const InstagramPostStudio: React.FC<Props> = ({ newsItem }) => {
     return () => clearInterval(interval);
   }, [isGeneratingAI]);
 
+  const [generationError, setGenerationError] = useState<string | null>(null);
+
   // Two-Stage AI Content Analysis + Image Generation Pipeline
   const handleGenerateServerAiBackground = async () => {
     setIsGeneratingAI(true);
     setGenerationStage('analyzing');
     setApiNotice(null);
     setActivePrompt(null);
+    setGenerationError(null);
     const startTime = performance.now();
 
     try {
-      // Stage 1: GPT analyzes content → Stage 2: DALL-E renders image
       setGenerationStage('analyzing');
       const res = await fetch('/api/generate-image', {
         method: 'POST',
@@ -89,27 +91,23 @@ export const InstagramPostStudio: React.FC<Props> = ({ newsItem }) => {
       });
 
       setGenerationStage('rendering');
+      const data = await res.json();
 
-      if (res.ok) {
-        const data = await res.json();
-        if (data.imageUrl) {
-          setCustomImageUrl(data.imageUrl);
-          setActiveProvider(data.provider || null);
-        }
-        if (data.promptUsed) {
-          setActivePrompt(data.promptUsed);
-        }
-        if (data.notice) {
-          setApiNotice(data.notice);
-        }
+      if (res.ok && data.success && data.imageUrl) {
+        setCustomImageUrl(data.imageUrl);
+        setActiveProvider(data.provider || null);
+        if (data.promptUsed) setActivePrompt(data.promptUsed);
+        if (data.notice) setApiNotice(data.notice);
       } else {
-        const clientDataUrl = generateInStudioAiVisual(newsItem.title, newsItem.category, newsItem.summary);
-        if (clientDataUrl) setCustomImageUrl(clientDataUrl);
+        const errorMsg = data.error || `Server HTTP ${res.status}: ${res.statusText}`;
+        console.error('[RAYU Studio] Image generation failed:', errorMsg, data.providerErrors);
+        setGenerationError(errorMsg);
+        setCustomImageUrl(null); // Do not use fake/canvas fallback
       }
-    } catch (err) {
-      console.error('Server AI Background generation error:', err);
-      const clientDataUrl = generateInStudioAiVisual(newsItem.title, newsItem.category, newsItem.summary);
-      if (clientDataUrl) setCustomImageUrl(clientDataUrl);
+    } catch (err: any) {
+      console.error('[RAYU Studio] Network or fatal error during generation:', err);
+      setGenerationError(`Network Error: ${err.message || String(err)}`);
+      setCustomImageUrl(null); // Do not use fake/canvas fallback
     } finally {
       const endTime = performance.now();
       const duration = +((endTime - startTime) / 1000).toFixed(2);
@@ -153,19 +151,21 @@ export const InstagramPostStudio: React.FC<Props> = ({ newsItem }) => {
   };
 
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageLoadError, setImageLoadError] = useState<string | null>(null);
 
   // Reset image loaded state when URL changes
   useEffect(() => {
     setImageLoaded(false);
+    setImageLoadError(null);
   }, [customImageUrl]);
 
-  // Image load error fallback handler
+  // Image load error handler — NO silent canvas fallback!
   const handleImageError = () => {
-    const clientDataUrl = generateInStudioAiVisual(newsItem.title, newsItem.category, newsItem.summary);
-    if (clientDataUrl) setCustomImageUrl(clientDataUrl);
+    console.error('[RAYU Studio] Failed to load image from URL:', customImageUrl);
+    setImageLoadError('Failed to load background image from target URL.');
   };
 
-  const activeDisplayImage = customImageUrl || newsItem.imageUrl || generateInStudioAiVisual(newsItem.title, newsItem.category, newsItem.summary);
+  const activeDisplayImage = customImageUrl || newsItem.imageUrl || '';
 
   // Generate Instagram Caption
   const instagramCaption = `⚡ RAYU SOCIAL STREAM: [${newsItem.category}]
@@ -372,6 +372,28 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
             </button>
           </div>
         </div>
+
+        {/* Explicit Generation Error Banner */}
+        {generationError && !isGeneratingAI && (
+          <div className="p-3.5 bg-red-950/60 border border-red-500/80 rounded-sm text-xs font-mono text-red-200 space-y-1">
+            <div className="flex items-center gap-2 font-bold text-red-400 uppercase">
+              <AlertCircle size={14} />
+              <span>AI GENERATION FAILED (NO SILENT FALLBACK)</span>
+            </div>
+            <div className="text-red-300 break-words font-semibold">{generationError}</div>
+            <div className="text-[10px] text-red-400/80 pt-1 border-t border-red-500/20">
+              Check your API key scope in .env.local or select AUTO / Pollinations AI provider.
+            </div>
+          </div>
+        )}
+
+        {/* Explicit Image Load Error Banner */}
+        {imageLoadError && (
+          <div className="p-3 bg-red-950/40 border border-red-500/50 rounded-sm text-xs font-mono text-red-300 flex items-center gap-2">
+            <AlertCircle size={14} className="text-red-400 shrink-0" />
+            <span>{imageLoadError}</span>
+          </div>
+        )}
 
         {/* AI-Generated Scene Prompt Display */}
         {activePrompt && !isGeneratingAI && (

@@ -4,24 +4,21 @@ export const runtime = 'nodejs';
 export const maxDuration = 60;
 
 /**
- * RAYU AI Visual Engine — Free AI Stack
- *
- * Stage 1 (Prompt): Groq Llama 3 (FREE) reads story title+summary+category
- *                   and writes a hyper-specific photographic scene description.
- *
- * Stage 2 (Image):  Hugging Face FLUX.1-schnell (FREE) renders the image.
- *                   Falls back to DALL-E 3 (if credits), then Pollinations AI.
- *
- * All free options produce genuinely content-specific images tied to the story.
+ * RAYU AI Visual Engine API Route
+ * 
+ * Strict error reporting — NO silent fallbacks.
+ * Logs raw requests and responses to server logs and returns explicit error details to client.
  */
 
-// ── Stage 1A: Groq Llama 3 (FREE) prompt builder ──────────────────────────
+// ── 1. Groq Prompt Synthesis (Llama-3.1-8b) ──────────────────────────────────
 async function buildPromptWithGroq(
   title: string,
   summary: string,
   category: string,
   groqKey: string
-): Promise<string> {
+): Promise<{ prompt: string; rawResponse: any }> {
+  console.log('[RAYU AI API] Requesting Groq Llama-3.1-8b prompt synthesis...');
+  
   const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -33,187 +30,175 @@ async function buildPromptWithGroq(
       messages: [
         {
           role: 'system',
-          content: `You are a world-class art director for a premium digital news magazine called RAYU.
-Given a news story, describe a single striking, hyper-realistic photographic scene that visually represents the EXACT subject of that story.
-Rules:
-- Describe ONE specific real-world physical scene. Be ultra-specific to THIS story — not a generic stock photo.
-- Name the subject, location/setting, lighting, mood, camera angle.
-- No text, typography, logos, or words in the scene.
-- Under 90 words.
-- End with: "Cinematic dark atmosphere, neon cyber-lime green (#CCFF00) accent lighting, 8k photorealistic render, lower third left as clean empty dark space."`,
+          content: `You are an art director for RAYU digital magazine. Given a news headline and summary, describe ONE striking, hyper-realistic photographic scene (under 80 words) visually representing the subject. Rules: No text/words in image. End with: "Cinematic dark atmosphere, neon cyber-lime green accent lighting, 8k photorealistic render."`,
         },
         {
           role: 'user',
-          content: `Headline: "${title}"\nCategory: ${category}\nSummary: "${summary}"\n\nDescribe the visual scene:`,
+          content: `Headline: "${title}"\nCategory: ${category}\nSummary: "${summary}"\n\nVisual scene description:`,
         },
       ],
-      max_tokens: 200,
-      temperature: 0.8,
+      max_tokens: 180,
+      temperature: 0.7,
     }),
   });
 
+  const rawText = await res.text();
+  console.log(`[RAYU AI API] Groq HTTP Status: ${res.status}`);
+  
   if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Groq error (${res.status}): ${err.slice(0, 200)}`);
+    throw new Error(`Groq Prompt API returned HTTP ${res.status}: ${rawText.slice(0, 300)}`);
   }
 
-  const data = await res.json();
+  let data: any;
+  try {
+    data = JSON.parse(rawText);
+  } catch {
+    throw new Error(`Groq returned invalid JSON: ${rawText.slice(0, 200)}`);
+  }
+
   const prompt = data.choices?.[0]?.message?.content?.trim();
-  if (!prompt) throw new Error('Groq returned empty prompt');
-  return prompt;
-}
-
-// ── Stage 1B: Smart server-side fallback prompt builder ───────────────────
-// Works with zero API calls — still produces content-specific results
-function buildFallbackPrompt(title: string, summary: string, category: string): string {
-  const text = `${title} ${summary}`.toLowerCase();
-  const titleWords = title
-    .replace(/[^a-zA-Z0-9 ]/g, ' ')
-    .split(' ')
-    .filter(w => w.length > 3 && !['with', 'from', 'that', 'this', 'have', 'will', 'been', 'they', 'what', 'when', 'than', 'more'].includes(w.toLowerCase()))
-    .slice(0, 6)
-    .join(' ');
-
-  let scene = '';
-
-  if (text.match(/gta|grand theft|vice city|rockstar/)) {
-    scene = 'A gleaming neon-lit Vice City coastal boulevard at midnight with a luxury sports car tearing past palm trees and ocean reflections on wet asphalt, photorealistic game environment';
-  } else if (text.match(/fortnite|minecraft|call of duty|battlefield|elden ring|cyberpunk|gaming|gameplay|esports/)) {
-    scene = `A cinematic photorealistic video game environment scene related to ${titleWords}, dramatic in-engine lighting, ultra-high detail`;
-  } else if (text.match(/chip|semiconductor|silicon|fab|nvidia|intel|tsmc/)) {
-    scene = 'A gleaming silicon microchip wafer under blue UV cleanroom lights held by robotic precision arms in a semiconductor fabrication plant';
-  } else if (text.match(/ai|artificial intelligence|llm|openai|gemini|chatgpt|robot|neural/)) {
-    scene = `A glowing humanoid AI robot interfacing with a holographic neural network grid in a dark tech lab, related to ${titleWords}`;
-  } else if (text.match(/space|rocket|nasa|isro|satellite|orbit|launch|spacecraft|moon|mars/)) {
-    scene = text.includes('moon') || text.includes('lunar')
-      ? 'Astronauts planting a flag on the moon surface with Earth rising dramatically on the horizon'
-      : 'A massive rocket launching from a coastal pad at dusk with brilliant engine plumes reflected in ocean water below';
-  } else if (text.match(/bitcoin|crypto|ethereum|blockchain|defi|nft/)) {
-    scene = 'A glowing Bitcoin coin on a dark circuit board with live green candlestick trading charts reflected across curved screens in a dark room';
-  } else if (text.match(/india|modi|parliament|delhi|mumbai|election|government|rupee|economy|gdp/)) {
-    scene = text.includes('parliament') || text.includes('government')
-      ? 'The Indian Parliament building in New Delhi photographed at golden hour with dramatic monsoon clouds'
-      : text.includes('economy') || text.includes('market')
-      ? 'The Bombay Stock Exchange trading floor at peak hours with glowing screens and Indian traders'
-      : `A dramatic photorealistic documentary scene of India: ${titleWords}`;
-  } else if (text.match(/war|military|army|missile|nato|ukraine|russia|israel|conflict|drone|soldier/)) {
-    scene = text.includes('drone')
-      ? 'Military surveillance drones flying in formation above a city at night with thermal imaging displays'
-      : 'A high-tech military operations center with glowing radar screens, maps, and operators in a dark command bunker';
-  } else if (text.match(/movie|film|bollywood|hollywood|actor|netflix|cinema|director|trailer/)) {
-    scene = text.includes('bollywood')
-      ? 'A glamorous Bollywood film set in Mumbai with professional cinema cameras, dramatic lighting rigs, and performers in costume'
-      : 'A Hollywood blockbuster premiere red carpet with cascading camera flashes and a crowd of photographers';
-  } else if (text.match(/flood|storm|cyclone|earthquake|wildfire|drought|monsoon|climate/)) {
-    scene = text.includes('flood')
-      ? 'Aerial view of a city street flooded with brown water with rescue boats navigating between submerged vehicles'
-      : text.includes('fire') || text.includes('wildfire')
-      ? 'A raging wildfire consuming a hillside at night with towering orange flames and thick smoke against a dark sky'
-      : 'A massive dark storm system approaching a coastline with towering black cumulonimbus clouds and lightning';
-  } else if (text.match(/health|medical|hospital|vaccine|drug|cancer|virus|research|pharma/)) {
-    scene = 'Scientists in a cutting-edge medical research laboratory examining glowing vials and microscopy slides under bright sterile lights';
-  } else if (text.match(/python|code|developer|software|app|startup|hack|programming/)) {
-    scene = 'A developer workstation at night with multiple curved monitors displaying glowing code syntax, mechanical keyboard, and ambient LED strips';
-  } else {
-    scene = `A dramatic, premium editorial photorealistic scene depicting the news story: "${title}". ${summary?.slice(0, 100)}`;
+  if (!prompt) {
+    throw new Error(`Groq returned empty completion: ${JSON.stringify(data)}`);
   }
 
-  return `${scene}. Cinematic dark atmosphere, neon cyber-lime green (#CCFF00) accent lighting and highlights, 8k photorealistic render, highly detailed. Lower third of frame is clean empty dark negative space for text overlay. No text or words. Square 1:1.`;
+  return { prompt, rawResponse: data };
 }
 
-// ── Stage 2A: Hugging Face FLUX.1-schnell (FREE) ─────────────────────────
-async function generateWithHuggingFace(prompt: string, hfKey: string): Promise<string | null> {
-  // Use a prompt that's short enough for FLUX.1-schnell (max ~77 tokens)
-  const shortPrompt = prompt.slice(0, 500);
+// ── 2. DALL-E 3 Generation ───────────────────────────────────────────────────
+async function generateWithDallE(
+  prompt: string,
+  openAiKey: string
+): Promise<{ imageUrl: string; rawResponse: any }> {
+  console.log('[RAYU AI API] Calling OpenAI DALL-E 3 API...');
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 50000); // 50s timeout
+  const res = await fetch('https://api.openai.com/v1/images/generations', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${openAiKey}`,
+    },
+    body: JSON.stringify({
+      model: 'dall-e-3',
+      prompt,
+      n: 1,
+      size: '1024x1024',
+      quality: 'standard',
+    }),
+  });
 
-  try {
-    const res = await fetch('https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-schnell', {
+  const rawText = await res.text();
+  console.log(`[RAYU AI API] OpenAI DALL-E 3 HTTP Status: ${res.status}`);
+  console.log(`[RAYU AI API] OpenAI DALL-E 3 Response: ${rawText.slice(0, 300)}`);
+
+  if (!res.ok) {
+    throw new Error(`OpenAI DALL-E 3 HTTP ${res.status}: ${rawText}`);
+  }
+
+  const data = JSON.parse(rawText);
+  const imageUrl = data.data?.[0]?.url;
+  if (!imageUrl) {
+    throw new Error(`OpenAI response missing image URL: ${rawText}`);
+  }
+
+  return { imageUrl, rawResponse: data };
+}
+
+// ── 3. Gemini Imagen 3 Generation ───────────────────────────────────────────
+async function generateWithGemini(
+  prompt: string,
+  geminiKey: string
+): Promise<{ imageUrl: string; rawResponse: any }> {
+  console.log('[RAYU AI API] Calling Google Gemini Imagen API...');
+
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${geminiKey}`,
+    {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${hfKey}`,
-        'x-wait-for-model': 'true', // Wait if model is loading instead of 503
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        inputs: shortPrompt,
-        parameters: {
-          num_inference_steps: 4,
-          guidance_scale: 0,
-          width: 1024,
-          height: 1024,
-        },
+        instances: [{ prompt }],
+        parameters: { sampleCount: 1, aspectRatio: '1:1', outputMimeType: 'image/jpeg' },
       }),
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeout);
-
-    const contentType = res.headers.get('content-type') || '';
-    console.log(`[RAYU AI] HuggingFace response: ${res.status} ${contentType}`);
-
-    if (res.ok && contentType.startsWith('image/')) {
-      const buffer = await res.arrayBuffer();
-      const base64 = Buffer.from(buffer).toString('base64');
-      const mimeType = contentType.includes('png') ? 'image/png' : 'image/jpeg';
-      console.log('[RAYU AI] ✅ HuggingFace FLUX.1-schnell generated image successfully');
-      return `data:${mimeType};base64,${base64}`;
-    } else {
-      const errText = await res.text();
-      console.warn(`[RAYU AI] HuggingFace FLUX error (${res.status}):`, errText.slice(0, 300));
-      return null;
     }
-  } catch (err) {
-    clearTimeout(timeout);
-    if ((err as Error).name === 'AbortError') {
-      console.warn('[RAYU AI] HuggingFace timed out after 50s');
-    } else {
-      console.warn('[RAYU AI] HuggingFace fetch error:', String(err).slice(0, 150));
-    }
-    return null;
+  );
+
+  const rawText = await res.text();
+  console.log(`[RAYU AI API] Gemini Imagen HTTP Status: ${res.status}`);
+  console.log(`[RAYU AI API] Gemini Imagen Response: ${rawText.slice(0, 300)}`);
+
+  if (!res.ok) {
+    throw new Error(`Google Gemini Imagen HTTP ${res.status}: ${rawText}`);
   }
 
-}
-
-// ── Stage 2B: DALL-E 3 (if credits available) ────────────────────────────
-async function generateWithDallE(prompt: string, openAiKey: string): Promise<string | null> {
-  try {
-    const res = await fetch('https://api.openai.com/v1/images/generations', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${openAiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'dall-e-3',
-        prompt,
-        n: 1,
-        size: '1024x1024',
-        quality: 'standard',
-      }),
-    });
-
-    if (res.ok) {
-      const data = await res.json();
-      const url = data.data?.[0]?.url;
-      if (url) {
-        console.log('[RAYU AI] ✅ DALL-E 3 success');
-        return url;
-      }
-    } else {
-      const errText = await res.text();
-      console.warn('[RAYU AI] DALL-E 3 error:', res.status, errText.slice(0, 150));
-    }
-  } catch (err) {
-    console.warn('[RAYU AI] DALL-E 3 fetch error:', String(err).slice(0, 100));
+  const data = JSON.parse(rawText);
+  const b64 = data.predictions?.[0]?.bytesBase64Encoded;
+  if (!b64) {
+    throw new Error(`Gemini response missing bytesBase64Encoded image: ${rawText}`);
   }
-  return null;
+
+  return { imageUrl: `data:image/jpeg;base64,${b64}`, rawResponse: data };
 }
 
-// ── Main Handler ──────────────────────────────────────────────────────────
+// ── 4. Hugging Face FLUX Generation ──────────────────────────────────────────
+async function generateWithHuggingFace(
+  prompt: string,
+  hfKey: string
+): Promise<{ imageUrl: string; rawResponse: any }> {
+  console.log('[RAYU AI API] Calling Hugging Face Inference API...');
+
+  const res = await fetch('https://router.huggingface.co/hf-inference/v1/images/generations', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${hfKey}`,
+    },
+    body: JSON.stringify({
+      model: 'black-forest-labs/FLUX.1-schnell',
+      prompt: prompt.slice(0, 400),
+    }),
+  });
+
+  const rawText = await res.text();
+  console.log(`[RAYU AI API] HuggingFace HTTP Status: ${res.status}`);
+
+  if (!res.ok) {
+    throw new Error(`HuggingFace HTTP ${res.status}: ${rawText.slice(0, 300)}`);
+  }
+
+  const data = JSON.parse(rawText);
+  const b64 = data.data?.[0]?.b64_json;
+  const url = data.data?.[0]?.url;
+
+  if (b64) return { imageUrl: `data:image/png;base64,${b64}`, rawResponse: data };
+  if (url) return { imageUrl: url, rawResponse: data };
+
+  throw new Error(`HuggingFace response missing image data: ${rawText.slice(0, 200)}`);
+}
+
+// ── 5. Pollinations AI Flux Generation ───────────────────────────────────────
+async function generateWithPollinations(
+  prompt: string
+): Promise<{ imageUrl: string }> {
+  console.log('[RAYU AI API] Calling Pollinations AI Flux...');
+  const seed = Math.floor(Math.random() * 999999);
+  const encoded = encodeURIComponent(prompt);
+  const imageUrl = `https://image.pollinations.ai/prompt/${encoded}?width=1080&height=1080&nologo=true&seed=${seed}&model=flux`;
+  
+  // Verify Pollinations endpoint is responding with 200
+  const checkRes = await fetch(imageUrl, { method: 'HEAD' });
+  console.log(`[RAYU AI API] Pollinations HEAD Status: ${checkRes.status}`);
+  
+  if (!checkRes.ok) {
+    throw new Error(`Pollinations AI endpoint returned HTTP ${checkRes.status}`);
+  }
+
+  return { imageUrl };
+}
+
+// ── Main Route POST Handler ─────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
+  const providerErrors: Record<string, string> = {};
+
   try {
     const body = await req.json();
     const { title = '', category = '', summary = '', provider = 'AUTO' } = body;
@@ -223,117 +208,193 @@ export async function POST(req: NextRequest) {
     const groqKey = (process.env.GROQ_API_KEY || '').trim().replace(/^["']|["']$/g, '');
     const hfKey = (process.env.HUGGINGFACE_API_KEY || '').trim().replace(/^["']|["']$/g, '');
 
-    console.log(`[RAYU AI] Story: "${title.slice(0, 60)}" [${category}]`);
-    console.log(`[RAYU AI] Keys: Groq=${groqKey ? 'yes' : 'no'} HF=${hfKey ? 'yes' : 'no'} OpenAI=${openAiKey.startsWith('sk-') ? 'yes' : 'no'}`);
+    console.log(`\n========================================`);
+    console.log(`[RAYU AI API] NEW GENERATION REQUEST`);
+    console.log(`[RAYU AI API] Title: "${title}"`);
+    console.log(`[RAYU AI API] Category: "${category}"`);
+    console.log(`[RAYU AI API] Requested Provider: "${provider}"`);
+    console.log(`[RAYU AI API] Keys Present: OpenAI=${!!openAiKey}, Gemini=${!!geminiKey}, Groq=${!!groqKey}, HF=${!!hfKey}`);
+    console.log(`========================================\n`);
 
-    // ── Stage 1: Build content-specific visual prompt ──────────────────────
-    let visualPrompt: string | null = null;
-    let promptSource = 'fallback';
+    // Step 1: Synthesize visual prompt
+    let visualPrompt = '';
+    let promptSource = '';
 
-    // Try Groq first (free, best quality prompt)
     if (groqKey.startsWith('gsk_')) {
       try {
-        visualPrompt = await buildPromptWithGroq(title, summary, category, groqKey);
-        promptSource = 'groq-llama3';
-        console.log('[RAYU AI] ✅ Groq prompt:', visualPrompt.slice(0, 100));
-      } catch (err) {
-        console.warn('[RAYU AI] Groq prompt failed:', String(err).slice(0, 150));
+        const groqResult = await buildPromptWithGroq(title, summary, category, groqKey);
+        visualPrompt = groqResult.prompt;
+        promptSource = 'Groq Llama-3.1-8b';
+      } catch (err: any) {
+        console.error('[RAYU AI API] Groq prompt failed:', err.message);
+        providerErrors['Groq Prompt'] = err.message;
       }
     }
 
-    // Try OpenAI GPT-4o Mini for prompt building
-    if (!visualPrompt && openAiKey.startsWith('sk-')) {
-      try {
-        const res = await fetch('https://api.openai.com/v1/chat/completions', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${openAiKey}` },
-          body: JSON.stringify({
-            model: 'gpt-4o-mini',
-            messages: [
-              { role: 'system', content: 'You are a world-class art director. Given a news story, describe one specific hyper-realistic photographic scene (under 90 words, no text in scene) that directly represents this story. End with: "Cinematic dark atmosphere, neon cyber-lime green accent lighting, 8k photorealistic render, lower third empty dark space."' },
-              { role: 'user', content: `Headline: "${title}"\nCategory: ${category}\nSummary: "${summary}"\n\nDescribe the visual:` },
-            ],
-            max_tokens: 200,
-            temperature: 0.8,
-          }),
-        });
-        if (res.ok) {
-          const data = await res.json();
-          const p = data.choices?.[0]?.message?.content?.trim();
-          if (p) { visualPrompt = p; promptSource = 'gpt-4o-mini'; }
-        }
-      } catch (err) {
-        console.warn('[RAYU AI] GPT prompt failed:', String(err).slice(0, 100));
-      }
-    }
-
-    // Fallback: smart server-side content analysis (no API needed)
     if (!visualPrompt) {
-      visualPrompt = buildFallbackPrompt(title, summary, category);
-      promptSource = 'smart-fallback';
+      visualPrompt = `A striking photorealistic scene representing news story: "${title}". ${summary}. Cinematic dark atmosphere, neon cyber-lime green accent lighting, 8k photorealistic render. No text or words.`;
+      promptSource = 'Direct Headline Synthesis';
     }
 
-    console.log(`[RAYU AI] Prompt source: ${promptSource}`);
+    console.log(`[RAYU AI API] Visual Prompt (${promptSource}):\n"${visualPrompt}"\n`);
 
-    // ── Stage 2: Generate image ────────────────────────────────────────────
-
-    // Option A: HuggingFace FLUX.1 (FREE — try this first in AUTO mode)
-    if (hfKey.startsWith('hf_')) {
-      const imageUrl = await generateWithHuggingFace(visualPrompt, hfKey);
-      if (imageUrl) {
-        return NextResponse.json({ success: true, provider: 'HUGGINGFACE_FLUX', imageUrl, promptUsed: visualPrompt, promptSource });
+    // Step 2: Handle Explicit Provider Selection
+    if (provider === 'OPENAI') {
+      if (!openAiKey) {
+        return NextResponse.json(
+          { success: false, error: 'OPENAI_API_KEY is missing from environment variables (.env.local).' },
+          { status: 400 }
+        );
+      }
+      try {
+        const res = await generateWithDallE(visualPrompt, openAiKey);
+        return NextResponse.json({
+          success: true,
+          provider: 'OpenAI DALL-E 3',
+          imageUrl: res.imageUrl,
+          promptUsed: visualPrompt,
+          promptSource,
+        });
+      } catch (err: any) {
+        return NextResponse.json(
+          { success: false, error: `OpenAI DALL-E 3 Failed: ${err.message}`, promptUsed: visualPrompt },
+          { status: 502 }
+        );
       }
     }
 
-    // Option B: Gemini Imagen (if valid AIza key)
+    if (provider === 'GEMINI') {
+      if (!geminiKey) {
+        return NextResponse.json(
+          { success: false, error: 'GEMINI_API_KEY is missing from environment variables (.env.local).' },
+          { status: 400 }
+        );
+      }
+      try {
+        const res = await generateWithGemini(visualPrompt, geminiKey);
+        return NextResponse.json({
+          success: true,
+          provider: 'Google Gemini Imagen 3',
+          imageUrl: res.imageUrl,
+          promptUsed: visualPrompt,
+          promptSource,
+        });
+      } catch (err: any) {
+        return NextResponse.json(
+          { success: false, error: `Google Gemini Imagen Failed: ${err.message}`, promptUsed: visualPrompt },
+          { status: 502 }
+        );
+      }
+    }
+
+    if (provider === 'HUGGINGFACE') {
+      if (!hfKey) {
+        return NextResponse.json(
+          { success: false, error: 'HUGGINGFACE_API_KEY is missing from environment variables (.env.local).' },
+          { status: 400 }
+        );
+      }
+      try {
+        const res = await generateWithHuggingFace(visualPrompt, hfKey);
+        return NextResponse.json({
+          success: true,
+          provider: 'Hugging Face FLUX.1-schnell',
+          imageUrl: res.imageUrl,
+          promptUsed: visualPrompt,
+          promptSource,
+        });
+      } catch (err: any) {
+        return NextResponse.json(
+          { success: false, error: `Hugging Face FLUX Failed: ${err.message}`, promptUsed: visualPrompt },
+          { status: 502 }
+        );
+      }
+    }
+
+    // Step 3: AUTO Mode Execution Order (OpenAI -> Gemini -> HF -> Pollinations)
+    if (openAiKey.startsWith('sk-')) {
+      try {
+        const res = await generateWithDallE(visualPrompt, openAiKey);
+        return NextResponse.json({
+          success: true,
+          provider: 'OpenAI DALL-E 3',
+          imageUrl: res.imageUrl,
+          promptUsed: visualPrompt,
+          promptSource,
+        });
+      } catch (err: any) {
+        console.error('[RAYU AI API] AUTO Mode - OpenAI failed:', err.message);
+        providerErrors['OpenAI DALL-E 3'] = err.message;
+      }
+    }
+
     if (geminiKey.startsWith('AIza')) {
       try {
-        const geminiRes = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${geminiKey}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              instances: [{ prompt: visualPrompt }],
-              parameters: { sampleCount: 1, aspectRatio: '1:1', outputMimeType: 'image/jpeg' },
-            }),
-          }
-        );
-        if (geminiRes.ok) {
-          const geminiData = await geminiRes.json();
-          const b64 = geminiData.predictions?.[0]?.bytesBase64Encoded;
-          if (b64) {
-            return NextResponse.json({ success: true, provider: 'GEMINI_IMAGEN3', imageUrl: `data:image/jpeg;base64,${b64}`, promptUsed: visualPrompt, promptSource });
-          }
-        }
-      } catch (err) {
-        console.warn('[RAYU AI] Gemini error:', String(err).slice(0, 100));
+        const res = await generateWithGemini(visualPrompt, geminiKey);
+        return NextResponse.json({
+          success: true,
+          provider: 'Google Gemini Imagen 3',
+          imageUrl: res.imageUrl,
+          promptUsed: visualPrompt,
+          promptSource,
+        });
+      } catch (err: any) {
+        console.error('[RAYU AI API] AUTO Mode - Gemini failed:', err.message);
+        providerErrors['Gemini Imagen'] = err.message;
       }
     }
 
-    // Option C: DALL-E 3 (only if explicitly chosen — requires paid credits)
-    if (provider === 'OPENAI' && openAiKey.startsWith('sk-')) {
-      const imageUrl = await generateWithDallE(visualPrompt, openAiKey);
-      if (imageUrl) {
-        return NextResponse.json({ success: true, provider: 'OPENAI_DALLE3', imageUrl, promptUsed: visualPrompt, promptSource });
+    if (hfKey.startsWith('hf_')) {
+      try {
+        const res = await generateWithHuggingFace(visualPrompt, hfKey);
+        return NextResponse.json({
+          success: true,
+          provider: 'Hugging Face FLUX',
+          imageUrl: res.imageUrl,
+          promptUsed: visualPrompt,
+          promptSource,
+        });
+      } catch (err: any) {
+        console.error('[RAYU AI API] AUTO Mode - HuggingFace failed:', err.message);
+        providerErrors['Hugging Face FLUX'] = err.message;
       }
     }
 
-    // Option D: Pollinations AI Flux — free, always works, uses Groq-generated prompt
-    const seed = Math.floor(Math.random() * 999999);
-    const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(visualPrompt)}?width=1080&height=1080&nologo=true&seed=${seed}&model=flux&enhance=true`;
-    console.log('[RAYU AI] Using Pollinations Flux with Groq prompt');
+    // Fallback to Pollinations AI
+    try {
+      const res = await generateWithPollinations(visualPrompt);
+      return NextResponse.json({
+        success: true,
+        provider: 'Pollinations AI (FLUX)',
+        imageUrl: res.imageUrl,
+        promptUsed: visualPrompt,
+        promptSource,
+        providerErrors, // Surface any errors from attempted paid APIs
+      });
+    } catch (err: any) {
+      providerErrors['Pollinations AI'] = err.message;
+    }
 
-    return NextResponse.json({
-      success: true,
-      provider: 'POLLINATIONS_FLUX',
-      imageUrl: pollinationsUrl,
-      promptUsed: visualPrompt,
-      promptSource,
-    });
+    // All Providers Failed
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'All AI image generation providers failed.',
+        providerErrors,
+        promptUsed: visualPrompt,
+      },
+      { status: 502 }
+    );
 
-  } catch (error) {
-    console.error('[RAYU AI] Fatal error:', error);
-    return NextResponse.json({ success: false, error: String(error) }, { status: 500 });
+  } catch (error: any) {
+    console.error('[RAYU AI API] Fatal Error in POST /api/generate-image:', error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: `Server Fatal Error: ${error.message || String(error)}`,
+        providerErrors,
+      },
+      { status: 500 }
+    );
   }
 }
