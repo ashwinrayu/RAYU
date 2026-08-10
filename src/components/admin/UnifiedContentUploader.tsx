@@ -77,24 +77,43 @@ export const UnifiedContentUploader: React.FC<Props> = ({ onPostContentCreated }
   // State for raw extraction error message
   const [extractionError, setExtractionError] = useState<string | null>(null);
 
-  // Analyze image via Vision API with 20s hard timeout controller
-  const analyzeImageContent = async (originalDataUrl: string, filename?: string) => {
+  // Analyze image via browser Tesseract OCR + Groq Llama 3.3 70b with 20s hard timeout controller
+  const analyzeImageContent = async (file: File, originalDataUrl: string) => {
     setIsAnalyzing(true);
     setExtractionError(null);
     setHeadline('⚡ AI EXTRACTING CONTENT FROM SCREENSHOT...');
-    setNotice('⚡ AI Vision reading image text & synthesizing headline (20s max)...');
-    
-    // Compress image to lightweight base64 for fast API transmission
-    const compressedBase64 = await compressImageForVision(originalDataUrl);
+    setNotice('⚡ Reading image text via OCR in browser (20s max)...');
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 20000); // 20s hard timeout
 
+    let extractedText = '';
+    let worker: any = null;
+
     try {
+      // Step 1: Run browser Tesseract OCR directly on file
+      const { createWorker } = await import('tesseract.js');
+      worker = await createWorker('eng');
+      const ret = await worker.recognize(file);
+      extractedText = ret.data.text ? ret.data.text.trim() : '';
+      await worker.terminate();
+      worker = null;
+    } catch (ocrErr: any) {
+      console.warn('[Browser OCR Error]:', ocrErr);
+      if (worker) {
+        try { await worker.terminate(); } catch {}
+      }
+    }
+
+    try {
+      // Step 2: Send extracted text to /api/analyze-image to synthesize structured JSON via Groq
       const res = await fetch('/api/analyze-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageBase64: compressedBase64, originalBase64: originalDataUrl, filename }),
+        body: JSON.stringify({
+          extractedText: extractedText || file.name,
+          filename: file.name,
+        }),
         signal: controller.signal,
       });
       clearTimeout(timeoutId);
@@ -108,12 +127,12 @@ export const UnifiedContentUploader: React.FC<Props> = ({ onPostContentCreated }
         if (data.category && ['TECH', 'WORLD', 'LIFE', 'LEARNINGS'].includes(data.category)) {
           setCategory(data.category as PostCategory);
         }
-        setNotice(`✅ VISION AI EXTRACTED CONTENT via ${data.providerUsed || 'Vision Model'}`);
+        setNotice(`✅ EXTRACTED SCREENSHOT CONTENT via ${data.providerUsed || 'AI Model'}`);
       } else {
-        const errorMsg = data.error || `HTTP ${res.status} Vision Extraction Failed`;
+        const errorMsg = data.error || `HTTP ${res.status} Extraction Failed`;
         setExtractionError(errorMsg);
         setHeadline('Extraction failed — enter headline manually');
-        setNotice(`❌ Vision Extraction Failed: ${errorMsg}`);
+        setNotice(`❌ Extraction Failed: ${errorMsg}`);
       }
     } catch (err: any) {
       clearTimeout(timeoutId);
@@ -124,7 +143,7 @@ export const UnifiedContentUploader: React.FC<Props> = ({ onPostContentCreated }
 
       setExtractionError(failureDetail);
       setHeadline('Extraction failed — enter headline manually');
-      setNotice(`❌ Vision Extraction Error: ${failureDetail}`);
+      setNotice(`❌ Extraction Error: ${failureDetail}`);
     } finally {
       setIsAnalyzing(false);
     }
@@ -140,7 +159,7 @@ export const UnifiedContentUploader: React.FC<Props> = ({ onPostContentCreated }
       reader.onloadend = () => {
         const dataUrl = reader.result as string;
         setImagePreview(dataUrl);
-        analyzeImageContent(dataUrl, file.name);
+        analyzeImageContent(file, dataUrl);
       };
       reader.readAsDataURL(file);
     }
