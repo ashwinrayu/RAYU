@@ -18,15 +18,49 @@ export const CustomNewsUploader: React.FC<Props> = ({ onCustomNewsCreated }) => 
   const [summary, setSummary] = useState('');
   const [rayuTakeaway, setRayuTakeaway] = useState('');
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isAnalyzingImage, setIsAnalyzingImage] = useState(false);
+  const [analysisNotice, setAnalysisNotice] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const analyzeUploadedImage = async (dataUrl: string) => {
+    setIsAnalyzingImage(true);
+    setAnalysisNotice('AI Reading & Analyzing Image Content via OCR...');
+    try {
+      const res = await fetch('/api/analyze-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageBase64: dataUrl }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          if (data.title) setTitle(data.title);
+          if (data.summary) setSummary(data.summary);
+          if (data.rayuTakeaway) setRayuTakeaway(data.rayuTakeaway);
+          if (data.category) setCategory(data.category);
+          setAnalysisNotice(`✅ AI IDENTIFIED CONTENT: "${data.title}"`);
+        } else {
+          setAnalysisNotice(`💡 Uploaded image loaded. ${data.error || ''}`);
+        }
+      }
+    } catch (err: any) {
+      console.error('Image analysis error:', err);
+      setAnalysisNotice('💡 Image loaded. Enter headline above or auto-style into Studio.');
+    } finally {
+      setIsAnalyzingImage(false);
+    }
+  };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setImagePreview(reader.result as string);
+        const dataUrl = reader.result as string;
+        setImagePreview(dataUrl);
+        analyzeUploadedImage(dataUrl);
       };
       reader.readAsDataURL(file);
     }
@@ -36,10 +70,10 @@ export const CustomNewsUploader: React.FC<Props> = ({ onCustomNewsCreated }) => 
   const handleImportRockstarNewswire = () => {
     setInputMode('URL');
     setNewsUrl('https://www.rockstargames.com/newswire');
-    setTitle('Rockstar Newswire: GTA VI Vice City Official Bulletin & Telemetry');
+    setTitle('ROCKSTAR NEWSWIRE: GTA VI VICE CITY BULLETIN & TELEMETRY');
     setCategory('VIRAL');
     setRegion('GLOBAL');
-    setSummary('Official Grand Theft Auto VI Vice City bulletin released via Rockstar Games Newswire.');
+    setSummary('Official Grand Theft Auto VI Vice City bulletin released via Rockstar Games Newswire confirming Leonida state telemetry.');
     setRayuTakeaway('Rockstar Newswire has confirmed Leonida map scale and physics mechanics.');
   };
 
@@ -183,6 +217,26 @@ export const CustomNewsUploader: React.FC<Props> = ({ onCustomNewsCreated }) => 
                 onChange={handleImageChange}
                 className="hidden"
               />
+
+              {/* AI Image Analysis Status Notice */}
+              {analysisNotice && (
+                <div className={`mt-3 p-2.5 rounded-sm border text-[11px] font-mono flex items-center justify-between gap-2 ${
+                  isAnalyzingImage
+                    ? 'bg-[#CCFF00]/10 border-[#CCFF00]/40 text-[#CCFF00] animate-pulse'
+                    : 'bg-[#050505] border-white/20 text-neutral-200'
+                }`}>
+                  <span className="truncate">{analysisNotice}</span>
+                  {imagePreview && !isAnalyzingImage && (
+                    <button
+                      type="button"
+                      onClick={() => analyzeUploadedImage(imagePreview)}
+                      className="px-2 py-1 bg-white/10 hover:bg-white/20 text-[10px] uppercase rounded shrink-0 transition-colors"
+                    >
+                      RE-ANALYZE
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
