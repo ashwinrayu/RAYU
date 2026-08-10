@@ -25,6 +25,53 @@ export const TEMPLATES = [
   { id: 't5', name: '05. LIST BREAKDOWN', icon: LayoutGrid, color: '#FF00AA' },
 ];
 
+// Helper to convert base64 Data URL into a Blob URL so Chrome treats it as same-origin and respects the .png filename
+export const triggerPngDownload = (dataUrl: string, rawFilename: string) => {
+  let filename = rawFilename.toLowerCase().replace(/[^a-z0-9_.-]/g, '_');
+  if (!filename.endsWith('.png')) filename += '.png';
+
+  try {
+    if (dataUrl.startsWith('data:')) {
+      const parts = dataUrl.split(',');
+      const mime = parts[0].match(/:(.*?);/)?.[1] || 'image/png';
+      const bstr = atob(parts[1]);
+      let n = bstr.length;
+      const u8arr = new Uint8Array(n);
+      while (n--) {
+        u8arr[n] = bstr.charCodeAt(n);
+      }
+      const blob = new Blob([u8arr], { type: mime });
+      const blobUrl = URL.createObjectURL(blob);
+
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = filename;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+
+      setTimeout(() => {
+        if (document.body.contains(link)) document.body.removeChild(link);
+        URL.revokeObjectURL(blobUrl);
+      }, 1000);
+      return;
+    }
+  } catch (err) {
+    console.warn('[RAYU Studio] Blob download conversion warning:', err);
+  }
+
+  // Fallback direct link click
+  const link = document.createElement('a');
+  link.href = dataUrl;
+  link.download = filename;
+  link.setAttribute('download', filename);
+  document.body.appendChild(link);
+  link.click();
+  setTimeout(() => {
+    if (document.body.contains(link)) document.body.removeChild(link);
+  }, 1000);
+};
+
 export const InstagramPostStudio: React.FC<Props> = ({ newsItem, postContent }) => {
   // Normalize item parameters
   const itemTitle = postContent?.headline || newsItem?.title || 'UNTITLED POST';
@@ -355,13 +402,9 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
       // Step 4: Restore original src
       if (imgEl && originalSrc) imgEl.src = originalSrc;
 
-      // Step 5: Trigger download
-      const link = document.createElement('a');
-      link.download = `rayu-post-${selectedTemplate}-${safeNewsItem.id || 'export'}.png`;
-      link.href = pngDataUrl;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      // Step 5: Trigger download with Blob URL so Chrome respects .png filename & extension
+      const filename = `rayu_post_${selectedTemplate}_${safeNewsItem.id || Date.now()}`;
+      triggerPngDownload(pngDataUrl, filename);
 
     } catch (err) {
       console.error('[RAYU Studio] html-to-image export failed, running 2D Canvas fallback:', err);
@@ -466,14 +509,9 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
           ctx.fillStyle = '#A3A3A3';
           ctx.fillText('RAYU-360.VERCEL.APP', 710, 1010);
 
-          // Export & download
+          // Export & download with Blob helper
           const fallbackPng = canvas.toDataURL('image/png');
-          const link = document.createElement('a');
-          link.download = `rayu-post-${selectedTemplate}-${safeNewsItem.id || 'export'}.png`;
-          link.href = fallbackPng;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
+          triggerPngDownload(fallbackPng, `rayu_post_${selectedTemplate}_${safeNewsItem.id || Date.now()}`);
         }
       } catch (fallbackErr) {
         console.error('[RAYU Studio] Canvas fallback failed:', fallbackErr);

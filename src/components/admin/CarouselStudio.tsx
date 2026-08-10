@@ -6,6 +6,7 @@ import { OmniNewsItem } from '@/services/newsFetcher';
 import { PostContent } from '@/types/postContent';
 import { INSTAGRAM_HANDLE, WEBSITE_DOMAIN } from '@/data/instagram';
 import { toPng } from 'html-to-image';
+import { triggerPngDownload } from './InstagramPostStudio';
 
 interface Props {
   newsItem?: OmniNewsItem;
@@ -98,10 +99,7 @@ export const CarouselStudio: React.FC<Props> = ({ newsItem, postContent }) => {
     setIsExporting(true);
     try {
       const dataUrl = await toPng(slideRef.current, { quality: 1.0, pixelRatio: 2, cacheBust: false, skipFonts: true, fontEmbedCSS: '' });
-      const link = document.createElement('a');
-      link.download = `rayu-carousel-slide-${activeSlideIndex + 1}.png`;
-      link.href = dataUrl;
-      link.click();
+      triggerPngDownload(dataUrl, `rayu_carousel_slide_${activeSlideIndex + 1}.png`);
     } catch (err) {
       console.error('Slide export error:', err);
     } finally {
@@ -118,10 +116,7 @@ export const CarouselStudio: React.FC<Props> = ({ newsItem, postContent }) => {
         // Wait for slide to re-render in DOM
         await new Promise((r) => setTimeout(r, 400));
         const dataUrl = await toPng(slideRef.current, { quality: 1.0, pixelRatio: 2, cacheBust: false, skipFonts: true, fontEmbedCSS: '' });
-        const link = document.createElement('a');
-        link.download = `rayu-carousel-slide-${i + 1}-of-${slides.length}.png`;
-        link.href = dataUrl;
-        link.click();
+        triggerPngDownload(dataUrl, `rayu_carousel_slide_${i + 1}_of_${slides.length}.png`);
         await new Promise((r) => setTimeout(r, 200));
       }
     } catch (err) {
