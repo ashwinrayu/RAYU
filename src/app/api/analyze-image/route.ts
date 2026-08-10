@@ -1,159 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createWorker } from 'tesseract.js';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
 /**
- * RAYU Image Content Analyzer API Route
+ * RAYU Studio V2 — Vision Content Extraction API Route
  *
- * 1. Groq Llama 3.2 Vision (llama-3.2-11b-vision-preview) directly on compressed image.
- * 2. OpenAI GPT-4o-mini Vision (gpt-4o-mini) directly on compressed image.
- * 3. Tesseract.js OCR + Groq Llama 3.3 70b fallback.
+ * Sequentially tests vision-capable models:
+ * 1. Groq Vision (llama-3.2-11b-vision-preview)
+ * 2. OpenAI Vision (gpt-4o-mini)
+ * 3. Gemini Vision (gemini-1.5-flash)
+ *
+ * Returns structured JSON:
+ * { title, category, summary, rayuTakeaway } in RAYU's raw/unfiltered voice.
  */
 
-async function analyzeImageWithGroqVision(
-  imageBase64: string,
-  groqKey: string
-): Promise<{ title: string; category: string; summary: string; rayuTakeaway: string } | null> {
-  try {
-    console.log('[RAYU Image Analyzer] Sending image to Groq Llama 3.2 Vision API...');
-    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${groqKey}`,
-      },
-      body: JSON.stringify({
-        model: 'llama-3.2-11b-vision-preview',
-        messages: [
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: `You are an AI news editor for RAYU magazine. 
-Read all visible text and visual content in this image (screenshot, product bottle, article, graphic, chat).
-Synthesize structured JSON:
+const SYSTEM_PROMPT = `You are RAYU's executive content editor. 
+Analyze the visible text and visual concepts in this uploaded image/screenshot.
+Extract and synthesize structured JSON:
 {
-  "title": "Clear, punchy, UPPERCASE headline summarizing the main subject/product/text shown (under 10 words)",
-  "category": "TECH",
-  "summary": "1-2 sentence news summary describing what is shown in this image",
-  "rayuTakeaway": "1 short punchy editorial insight"
+  "title": "Clear, punchy, UPPERCASE headline in RAYU's raw/unfiltered editorial voice (under 10 words)",
+  "category": "One of: TECH, WORLD, LIFE, LEARNINGS",
+  "summary": "1-2 sentence supporting body summary describing what is shown or discussed in this image",
+  "rayuTakeaway": "1 short, punchy editorial insight in RAYU's voice"
 }
-Output ONLY raw JSON. No markdown formatting wrappers.`,
-              },
-              {
-                type: 'image_url',
-                image_url: { url: imageBase64 },
-              },
-            ],
-          },
-        ],
-        max_tokens: 350,
-        temperature: 0.2,
-      }),
-    });
+Rules: Output ONLY raw valid JSON. No markdown backticks or commentary.`;
 
-    if (!res.ok) {
-      const errText = await res.text();
-      console.warn('[RAYU Groq Vision] HTTP Error:', res.status, errText.slice(0, 200));
-      return null;
-    }
-
-    const data = await res.json();
-    const rawContent = data.choices?.[0]?.message?.content?.trim() || '';
-    const cleanedJson = rawContent
-      .replace(/^```json\s*/i, '')
-      .replace(/^```\s*/, '')
-      .replace(/\s*```$/, '')
-      .trim();
-
-    const parsed = JSON.parse(cleanedJson);
-
-    if (parsed.title) {
-      return {
-        title: parsed.title.toUpperCase(),
-        category: parsed.category || 'TECH',
-        summary: parsed.summary || parsed.title,
-        rayuTakeaway: parsed.rayuTakeaway || parsed.summary || parsed.title,
-      };
-    }
-  } catch (err: any) {
-    console.warn('[RAYU Groq Vision] Vision analysis error:', err.message);
-  }
-  return null;
-}
-
-async function analyzeImageWithOpenAiVision(
-  imageBase64: string,
-  openAiKey: string
-): Promise<{ title: string; category: string; summary: string; rayuTakeaway: string } | null> {
-  try {
-    console.log('[RAYU Image Analyzer] Sending image to OpenAI gpt-4o-mini Vision API...');
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${openAiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: `You are an AI editor for RAYU magazine. Read all visible text and visual concepts in this image (screenshot, product bottle, article, graphic, chat).
-Synthesize structured JSON:
-{
-  "title": "Clear, punchy, UPPERCASE headline summarizing the main subject/product/text shown (under 10 words)",
-  "category": "TECH",
-  "summary": "1-2 sentence news summary describing what is shown in this image",
-  "rayuTakeaway": "1 short punchy editorial insight"
-}
-Output ONLY raw JSON. No markdown formatting wrappers.`,
-              },
-              {
-                type: 'image_url',
-                image_url: { url: imageBase64 },
-              },
-            ],
-          },
-        ],
-        max_tokens: 350,
-        temperature: 0.2,
-      }),
-    });
-
-    if (res.ok) {
-      const data = await res.json();
-      const rawContent = data.choices?.[0]?.message?.content?.trim() || '';
-      const cleanedJson = rawContent.replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/\s*```$/, '').trim();
-      const parsed = JSON.parse(cleanedJson);
-      if (parsed.title) {
-        return {
-          title: parsed.title.toUpperCase(),
-          category: parsed.category || 'TECH',
-          summary: parsed.summary || parsed.title,
-          rayuTakeaway: parsed.rayuTakeaway || parsed.summary || parsed.title,
-        };
-      }
-    } else {
-      const errText = await res.text();
-      console.warn('[RAYU OpenAI Vision] HTTP Error:', res.status, errText.slice(0, 200));
-    }
-  } catch (err: any) {
-    console.warn('[RAYU OpenAI Vision] Vision analysis error:', err.message);
-  }
-  return null;
-}
-
-async function synthesizeArticleFromOcrText(
-  extractedText: string,
-  groqKey: string
-): Promise<{ title: string; category: string; summary: string; rayuTakeaway: string }> {
+async function tryGroqVision(imageBase64: string, groqKey: string) {
   const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -161,152 +34,203 @@ async function synthesizeArticleFromOcrText(
       Authorization: `Bearer ${groqKey}`,
     },
     body: JSON.stringify({
-      model: 'llama-3.3-70b-versatile',
+      model: 'llama-3.2-11b-vision-preview',
       messages: [
         {
-          role: 'system',
-          content: `You are an executive news editor for RAYU magazine.
-Analyze the raw OCR text extracted from an image and output structured JSON:
-{
-  "title": "Clear, punchy, uppercase headline summarizing the main subject or product (under 10 words)",
-  "category": "TECH",
-  "summary": "1-2 sentence news summary describing what this image/product/article is about",
-  "rayuTakeaway": "1 short punchy editorial insight"
-}
-Output ONLY valid JSON. No markdown formatting.`,
-        },
-        {
           role: 'user',
-          content: `Extracted Text from Image:\n"""\n${extractedText.slice(0, 2000)}\n"""\n\nJSON Metadata:`,
+          content: [
+            { type: 'text', text: SYSTEM_PROMPT },
+            { type: 'image_url', image_url: { url: imageBase64 } },
+          ],
         },
       ],
-      max_tokens: 300,
+      max_tokens: 350,
       temperature: 0.3,
     }),
   });
 
   if (!res.ok) {
-    throw new Error(`Groq LLM HTTP ${res.status}`);
+    const text = await res.text();
+    throw new Error(`Groq Vision HTTP ${res.status}: ${text.slice(0, 150)}`);
   }
 
   const data = await res.json();
   const rawContent = data.choices?.[0]?.message?.content?.trim() || '';
   const cleanedJson = rawContent.replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/\s*```$/, '').trim();
-  const parsed = JSON.parse(cleanedJson);
+  return JSON.parse(cleanedJson);
+}
 
-  return {
-    title: (parsed.title || 'IDENTIFIED VISUAL CONTENT').toUpperCase(),
-    category: parsed.category || 'TECH',
-    summary: parsed.summary || extractedText.slice(0, 150),
-    rayuTakeaway: parsed.rayuTakeaway || parsed.summary,
-  };
+async function tryOpenAiVision(imageBase64: string, openAiKey: string) {
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${openAiKey}`,
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: SYSTEM_PROMPT },
+            { type: 'image_url', image_url: { url: imageBase64 } },
+          ],
+        },
+      ],
+      max_tokens: 350,
+      temperature: 0.3,
+    }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`OpenAI Vision HTTP ${res.status}: ${text.slice(0, 150)}`);
+  }
+
+  const data = await res.json();
+  const rawContent = data.choices?.[0]?.message?.content?.trim() || '';
+  const cleanedJson = rawContent.replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/\s*```$/, '').trim();
+  return JSON.parse(cleanedJson);
+}
+
+async function tryGeminiVision(imageBase64: string, geminiKey: string) {
+  if (!geminiKey.startsWith('AIza')) {
+    throw new Error(`Gemini Key warning: format is OAuth, requires AI Studio key starting with AIzaSy...`);
+  }
+
+  const mimeMatch = imageBase64.match(/^data:(image\/\w+);base64,/);
+  const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+  const cleanBase64 = imageBase64.replace(/^data:image\/\w+;base64,/, '');
+
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [
+              { text: SYSTEM_PROMPT },
+              { inlineData: { mimeType, data: cleanBase64 } },
+            ],
+          },
+        ],
+      }),
+    }
+  );
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Gemini Vision HTTP ${res.status}: ${text.slice(0, 150)}`);
+  }
+
+  const data = await res.json();
+  const rawContent = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+  const cleanedJson = rawContent.replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/\s*```$/, '').trim();
+  return JSON.parse(cleanedJson);
 }
 
 export async function POST(req: NextRequest) {
-  let worker: any = null;
+  const errors: string[] = [];
 
   try {
     const body = await req.json();
     const { imageBase64 = '', originalBase64 = '', imageUrl = '' } = body;
-
     const targetImage = imageBase64 || originalBase64 || imageUrl;
+
     if (!targetImage) {
-      return NextResponse.json({ success: false, error: 'No image provided for analysis' }, { status: 400 });
+      return NextResponse.json(
+        { success: false, error: 'No image data payload provided for vision analysis' },
+        { status: 400 }
+      );
     }
 
     const groqKey = (process.env.GROQ_API_KEY || '').trim().replace(/^["']|["']$/g, '');
     const openAiKey = (process.env.OPENAI_API_KEY || '').trim().replace(/^["']|["']$/g, '');
+    const geminiKey = (process.env.GEMINI_API_KEY || '').trim().replace(/^["']|["']$/g, '');
 
-    // STAGE 1: Attempt Groq Llama 3.2 Vision directly on image
-    if (groqKey.startsWith('gsk_')) {
-      const visionResult = await analyzeImageWithGroqVision(targetImage, groqKey);
-      if (visionResult && visionResult.title) {
-        console.log('[RAYU Image Analyzer] ✅ Groq Vision Extracted Title:', visionResult.title);
-        return NextResponse.json({
-          success: true,
-          method: 'GROQ_VISION',
-          title: visionResult.title,
-          category: visionResult.category,
-          summary: visionResult.summary,
-          rayuTakeaway: visionResult.rayuTakeaway,
-        });
-      }
-    }
-
-    // STAGE 2: Attempt OpenAI GPT-4o-mini Vision directly on image
-    if (openAiKey.startsWith('sk-')) {
-      const openAiVisionResult = await analyzeImageWithOpenAiVision(targetImage, openAiKey);
-      if (openAiVisionResult && openAiVisionResult.title) {
-        console.log('[RAYU Image Analyzer] ✅ OpenAI Vision Extracted Title:', openAiVisionResult.title);
-        return NextResponse.json({
-          success: true,
-          method: 'OPENAI_VISION',
-          title: openAiVisionResult.title,
-          category: openAiVisionResult.category,
-          summary: openAiVisionResult.summary,
-          rayuTakeaway: openAiVisionResult.rayuTakeaway,
-        });
-      }
-    }
-
-    // STAGE 3: Fallback to Tesseract.js OCR + Groq Llama 3.3 70b
-    let extractedText = '';
-    try {
-      console.log('[RAYU Image Analyzer] Fallback to Tesseract OCR text extraction...');
-      worker = await createWorker('eng');
-      const ocrResult = await worker.recognize(targetImage);
-      extractedText = ocrResult.data.text ? ocrResult.data.text.trim() : '';
-      await worker.terminate();
-      worker = null;
-    } catch (ocrErr: any) {
-      console.warn('[RAYU Image Analyzer] OCR worker error:', ocrErr.message);
-      if (worker) {
-        try { await worker.terminate(); } catch {}
-        worker = null;
-      }
-    }
-
-    if (extractedText && extractedText.length > 5 && groqKey.startsWith('gsk_')) {
+    // 1. Try Groq Llama 3.2 Vision
+    if (groqKey) {
       try {
-        const synthesized = await synthesizeArticleFromOcrText(extractedText, groqKey);
-        return NextResponse.json({
-          success: true,
-          method: 'OCR_LLM',
-          extractedText,
-          title: synthesized.title,
-          category: synthesized.category,
-          summary: synthesized.summary,
-          rayuTakeaway: synthesized.rayuTakeaway,
-        });
+        console.log('[RAYU Vision] Attempting Groq Vision API...');
+        const parsed = await tryGroqVision(targetImage, groqKey);
+        if (parsed?.title) {
+          return NextResponse.json({
+            success: true,
+            providerUsed: 'Groq Llama 3.2 Vision',
+            title: parsed.title.toUpperCase(),
+            category: parsed.category || 'TECH',
+            summary: parsed.summary || parsed.title,
+            rayuTakeaway: parsed.rayuTakeaway || parsed.summary,
+          });
+        }
       } catch (err: any) {
-        console.warn('[RAYU Image Analyzer] Synthesis error:', err.message);
+        console.warn('[RAYU Vision] Groq failed:', err.message);
+        errors.push(`Groq Vision: ${err.message}`);
       }
     }
 
-    const filenameHint = body.filename ? body.filename.replace(/\.[^/.]+$/, '').replace(/[_-]+/g, ' ').toUpperCase() : '';
-    const fallbackTitle = filenameHint && filenameHint.length > 3 ? filenameHint : 'IDENTIFIED IMAGE GRAPHIC CONCEPT';
-
-    return NextResponse.json({
-      success: true,
-      method: 'OCR_FALLBACK',
-      extractedText,
-      title: fallbackTitle,
-      category: 'TECH',
-      summary: extractedText.slice(0, 200) || 'Visual content identified from uploaded image.',
-      rayuTakeaway: 'Content identified and formatted for RAYU publication.',
-    });
-
-  } catch (error: any) {
-    console.error('[RAYU Image Analyzer] Route Error:', error);
-    if (worker) {
-      try { await worker.terminate(); } catch {}
+    // 2. Try OpenAI GPT-4o-mini Vision
+    if (openAiKey) {
+      try {
+        console.log('[RAYU Vision] Attempting OpenAI Vision API...');
+        const parsed = await tryOpenAiVision(targetImage, openAiKey);
+        if (parsed?.title) {
+          return NextResponse.json({
+            success: true,
+            providerUsed: 'OpenAI GPT-4o-mini Vision',
+            title: parsed.title.toUpperCase(),
+            category: parsed.category || 'TECH',
+            summary: parsed.summary || parsed.title,
+            rayuTakeaway: parsed.rayuTakeaway || parsed.summary,
+          });
+        }
+      } catch (err: any) {
+        console.warn('[RAYU Vision] OpenAI failed:', err.message);
+        errors.push(`OpenAI Vision: ${err.message}`);
+      }
     }
-    return NextResponse.json({
-      success: true,
-      title: 'IDENTIFIED VISUAL CONCEPT',
-      category: 'TECH',
-      summary: 'Visual content identified from uploaded screenshot.',
-      rayuTakeaway: 'Content formatted for RAYU publication.',
-    });
+
+    // 3. Try Gemini 1.5 Flash Vision
+    if (geminiKey) {
+      try {
+        console.log('[RAYU Vision] Attempting Gemini Vision API...');
+        const parsed = await tryGeminiVision(targetImage, geminiKey);
+        if (parsed?.title) {
+          return NextResponse.json({
+            success: true,
+            providerUsed: 'Gemini 1.5 Flash Vision',
+            title: parsed.title.toUpperCase(),
+            category: parsed.category || 'TECH',
+            summary: parsed.summary || parsed.title,
+            rayuTakeaway: parsed.rayuTakeaway || parsed.summary,
+          });
+        }
+      } catch (err: any) {
+        console.warn('[RAYU Vision] Gemini failed:', err.message);
+        errors.push(`Gemini Vision: ${err.message}`);
+      }
+    }
+
+    // Explicit error response if all vision providers failed
+    return NextResponse.json(
+      {
+        success: false,
+        error: `All Vision AI models failed to extract content. Errors: ${errors.join(' | ')}`,
+        errors,
+      },
+      { status: 502 }
+    );
+  } catch (error: any) {
+    console.error('[RAYU Vision] Unexpected Route Error:', error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: `Vision Extraction Error: ${error.message || String(error)}`,
+      },
+      { status: 500 }
+    );
   }
 }

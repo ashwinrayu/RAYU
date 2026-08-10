@@ -74,16 +74,21 @@ export const UnifiedContentUploader: React.FC<Props> = ({ onPostContentCreated }
     });
   };
 
-  // Analyze image via Groq/OpenAI Vision API directly from pixels
+  // State for raw extraction error message
+  const [extractionError, setExtractionError] = useState<string | null>(null);
+
+  // Analyze image via Vision API with 20s hard timeout controller
   const analyzeImageContent = async (originalDataUrl: string, filename?: string) => {
     setIsAnalyzing(true);
-    setNotice('⚡ Vision AI Reading Text & Visual Content directly from Image...');
+    setExtractionError(null);
+    setHeadline('⚡ AI EXTRACTING CONTENT FROM SCREENSHOT...');
+    setNotice('⚡ AI Vision reading image text & synthesizing headline (20s max)...');
     
     // Compress image to lightweight base64 for fast API transmission
     const compressedBase64 = await compressImageForVision(originalDataUrl);
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 12000); // 12s timeout
+    const timeoutId = setTimeout(() => controller.abort(), 20000); // 20s hard timeout
 
     try {
       const res = await fetch('/api/analyze-image', {
@@ -94,42 +99,42 @@ export const UnifiedContentUploader: React.FC<Props> = ({ onPostContentCreated }
       });
       clearTimeout(timeoutId);
 
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success && data.title && !data.title.includes('CHATGPT AI RESPONSE ANALYSIS') && !data.title.includes('AUG 7')) {
-          setHeadline(data.title);
-          if (data.summary) setBodyText(data.summary);
-          if (data.rayuTakeaway) setTakeaway(data.rayuTakeaway);
-          setNotice(`✅ VISION AI EXTRACTED TITLE: "${data.title}"`);
-          return;
-        } else if (data.title) {
-          setHeadline(data.title);
-          if (data.summary) setBodyText(data.summary);
-          if (data.rayuTakeaway) setTakeaway(data.rayuTakeaway);
-          setNotice(`✅ VISION AI ANALYSIS COMPLETE`);
-          return;
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        if (data.title) setHeadline(data.title);
+        if (data.summary) setBodyText(data.summary);
+        if (data.rayuTakeaway) setTakeaway(data.rayuTakeaway);
+        if (data.category && ['TECH', 'WORLD', 'LIFE', 'LEARNINGS'].includes(data.category)) {
+          setCategory(data.category as PostCategory);
         }
+        setNotice(`✅ VISION AI EXTRACTED CONTENT via ${data.providerUsed || 'Vision Model'}`);
+      } else {
+        const errorMsg = data.error || `HTTP ${res.status} Vision Extraction Failed`;
+        setExtractionError(errorMsg);
+        setHeadline('Extraction failed — enter headline manually');
+        setNotice(`❌ Vision Extraction Failed: ${errorMsg}`);
       }
     } catch (err: any) {
       clearTimeout(timeoutId);
-      console.warn('Vision analysis error:', err);
+      const isTimeout = err.name === 'AbortError';
+      const failureDetail = isTimeout
+        ? 'Vision extraction request timed out after 20 seconds.'
+        : `Network error: ${err.message || String(err)}`;
+
+      setExtractionError(failureDetail);
+      setHeadline('Extraction failed — enter headline manually');
+      setNotice(`❌ Vision Extraction Error: ${failureDetail}`);
     } finally {
       setIsAnalyzing(false);
     }
-
-    // Fallback if Vision API fails
-    if (filename) {
-      setHeadline(formatHeadlineFromFilename(filename));
-    }
-    setNotice('✅ Image loaded! Headline populated.');
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Clear previous title so Vision AI fills real headline
-      setHeadline('');
-      setNotice('⚡ Reading image content...');
+      setExtractionError(null);
+      setHeadline('⚡ AI EXTRACTING CONTENT FROM SCREENSHOT...');
 
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -355,7 +360,13 @@ export const UnifiedContentUploader: React.FC<Props> = ({ onPostContentCreated }
               onChange={handleFileChange}
               className="block w-full text-xs font-mono text-neutral-400 file:mr-4 file:py-2 file:px-4 file:rounded-sm file:border-0 file:text-xs file:font-mono file:font-bold file:bg-[#CCFF00] file:text-black hover:file:bg-[#b5e600] cursor-pointer"
             />
-            {notice && <div className="mt-2 text-xs font-mono text-[#CCFF00]">{notice}</div>}
+            {notice && (
+              <div className={`mt-2 text-xs font-mono p-2 border rounded-sm ${
+                extractionError ? 'bg-red-950/90 border-red-500 text-red-200 font-bold' : 'bg-[#CCFF00]/10 border-[#CCFF00]/30 text-[#CCFF00]'
+              }`}>
+                {notice}
+              </div>
+            )}
           </div>
         )}
 
