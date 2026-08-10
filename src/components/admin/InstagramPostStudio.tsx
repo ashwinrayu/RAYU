@@ -93,6 +93,8 @@ export const InstagramPostStudio: React.FC<Props> = ({ newsItem, postContent }) 
   const [imageSource, setImageSource] = useState<'ai' | 'upload'>(isUploadedImage ? 'upload' : 'ai');
 
   // Preserve uploaded image on item change
+  // NOTE: Do NOT auto-trigger AI generation when title/content changes (e.g. after link extraction).
+  // Only auto-generate when provider or layout changes AND no image is currently set.
   useEffect(() => {
     const srcImg = postContent?.sourceImage || newsItem?.imageUrl;
     if (srcImg && srcImg.startsWith('data:')) {
@@ -100,10 +102,23 @@ export const InstagramPostStudio: React.FC<Props> = ({ newsItem, postContent }) 
       setCustomImageUrl(srcImg);
       setImageSource('upload');
       setImageLoaded(true);
-    } else if (imageSource === 'ai') {
+    }
+    // Do NOT auto-generate on title/category/sourceImage change —
+    // user must click "GENERATE AI ART" explicitly.
+  }, [postContent?.sourceImage, newsItem?.imageUrl]);
+
+  // Re-generate if user changes AI provider or negative zone (only if already in AI mode with no image)
+  const prevAiProvider = React.useRef(aiProvider);
+  const prevNegativeZone = React.useRef(negativeZone);
+  useEffect(() => {
+    const providerChanged = prevAiProvider.current !== aiProvider;
+    const zoneChanged = prevNegativeZone.current !== negativeZone;
+    prevAiProvider.current = aiProvider;
+    prevNegativeZone.current = negativeZone;
+    if ((providerChanged || zoneChanged) && imageSource === 'ai' && customImageUrl && !isGeneratingAI) {
       handleGenerateServerAiBackground();
     }
-  }, [itemTitle, itemCategory, postContent?.sourceImage, aiProvider, negativeZone]);
+  }, [aiProvider, negativeZone]);
 
   // Elapsed timer tracking
   useEffect(() => {
@@ -227,12 +242,20 @@ export const InstagramPostStudio: React.FC<Props> = ({ newsItem, postContent }) 
     handleGenerateServerAiBackground();
   };
 
-  const [imageLoaded, setImageLoaded] = useState(false);
+  // Treat local/static paths and base64 data URLs as already loaded — no need to wait for onLoad
+  const isInstantImage = (url: string | null) =>
+    !url ? false : url.startsWith('data:') || url.startsWith('/') || url.startsWith('blob:');
+
+  const [imageLoaded, setImageLoaded] = useState(() => isInstantImage(initialImage));
   const [imageLoadError, setImageLoadError] = useState<string | null>(null);
 
-  // Reset image loaded state when URL changes
+  // Reset image loaded state when URL changes — skip waiting for local/base64 images
   useEffect(() => {
-    setImageLoaded(false);
+    if (isInstantImage(customImageUrl)) {
+      setImageLoaded(true);
+    } else {
+      setImageLoaded(false);
+    }
     setImageLoadError(null);
   }, [customImageUrl]);
 
