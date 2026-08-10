@@ -162,16 +162,17 @@ async function generateWithHuggingFace(
   prompt: string,
   hfKey: string
 ): Promise<{ imageUrl: string; rawResponse: any }> {
-  console.log('[RAYU AI API] Calling Hugging Face Inference API...');
+  console.log('[RAYU AI API] Calling Hugging Face Inference API (FLUX.1-dev via fal-ai router)...');
 
-  const res = await fetch('https://router.huggingface.co/hf-inference/v1/images/generations', {
+  const res = await fetch('https://router.huggingface.co/fal-ai/v1/images/generations', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${hfKey}`,
     },
+    signal: AbortSignal.timeout(4000),
     body: JSON.stringify({
-      model: 'black-forest-labs/FLUX.1-schnell',
+      model: 'fal-ai/flux/schnell',
       prompt: prompt.slice(0, 400),
     }),
   });
