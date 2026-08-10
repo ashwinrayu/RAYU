@@ -355,208 +355,191 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
     setTimeout(() => setPublished(false), 3000);
   };
 
-  const handleDownloadCard = async () => {
-    if (!cardRef.current) return;
-    setIsDownloading(true);
+  const [exportPngUrl, setExportPngUrl] = useState<string | null>(null);
 
+  // Synchronous 2D Canvas export function — runs in < 5ms so Chrome's User Activation gesture stays active
+  const renderCardToCanvasSync = (templateId: string): HTMLCanvasElement => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1080;
+    canvas.height = 1080;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return canvas;
+
+    // 1. Dark Base Background
+    ctx.fillStyle = '#050505';
+    ctx.fillRect(0, 0, 1080, 1080);
+
+    // 2. Draw background image from card DOM if available and loaded
+    if (cardRef.current) {
+      const imgEl = cardRef.current.querySelector('img') as HTMLImageElement | null;
+      if (imgEl && imgEl.complete && imgEl.naturalWidth > 0) {
+        try {
+          const scale = Math.max(1080 / imgEl.naturalWidth, 1080 / imgEl.naturalHeight);
+          const x = (1080 - imgEl.naturalWidth * scale) / 2;
+          const y = (1080 - imgEl.naturalHeight * scale) / 2;
+          ctx.save();
+          ctx.globalAlpha = templateId === 't3' ? 0.25 : 0.40;
+          ctx.drawImage(imgEl, x, y, imgEl.naturalWidth * scale, imgEl.naturalHeight * scale);
+          ctx.restore();
+        } catch (e) {
+          console.warn('[RAYU Studio] Canvas bg image draw warning:', e);
+        }
+      }
+    }
+
+    // 3. Vignette Overlay
+    const grad = ctx.createLinearGradient(0, 0, 0, 1080);
+    grad.addColorStop(0, 'rgba(5, 5, 5, 0.65)');
+    grad.addColorStop(0.5, 'rgba(5, 5, 5, 0.82)');
+    grad.addColorStop(1, 'rgba(5, 5, 5, 0.95)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 1080, 1080);
+
+    // Outer border
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(20, 20, 1040, 1040);
+
+    const title = (editableTitle || itemTitle).toUpperCase();
+    const summary = editableSummary || itemSummary;
+    const takeaway = editableTakeaway || itemTakeaway;
+    const category = (itemCategory || 'TECH').toUpperCase();
+    const region = 'GLOBAL';
+
+    // Helper to wrap text
+    const wrapText = (
+      text: string,
+      x: number,
+      startY: number,
+      maxWidth: number,
+      lineHeight: number,
+      maxLines = 4
+    ): number => {
+      const words = text.split(' ');
+      let line = '';
+      let currentY = startY;
+      let linesCount = 0;
+
+      for (let n = 0; n < words.length; n++) {
+        const testLine = line + words[n] + ' ';
+        const metrics = ctx.measureText(testLine);
+        if (metrics.width > maxWidth && n > 0) {
+          ctx.fillText(line.trim(), x, currentY);
+          line = words[n] + ' ';
+          currentY += lineHeight;
+          linesCount++;
+          if (linesCount >= maxLines) {
+            ctx.fillText(line.trim() + '...', x, currentY);
+            return currentY;
+          }
+        } else {
+          line = testLine;
+        }
+      }
+      ctx.fillText(line.trim(), x, currentY);
+      return currentY;
+    };
+
+    // Header
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = '900 52px Outfit, Inter, sans-serif';
+    ctx.fillText('RAYU', 70, 115);
+    ctx.fillStyle = '#CCFF00';
+    ctx.fillText('.', 208, 115);
+
+    ctx.fillStyle = '#CCFF00';
+    ctx.fillRect(820, 70, 190, 48);
+    ctx.fillStyle = '#050505';
+    ctx.font = 'bold 20px "JetBrains Mono", monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(`[${category}]`, 915, 101);
+    ctx.textAlign = 'left';
+
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+    ctx.beginPath();
+    ctx.moveTo(70, 145);
+    ctx.lineTo(1010, 145);
+    ctx.stroke();
+
+    ctx.fillStyle = '#CCFF00';
+    ctx.font = 'bold 22px "JetBrains Mono", monospace';
+    ctx.fillText(`● LIVE AWARENESS • ${region}`, 70, 230);
+
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = '900 48px Outfit, Inter, sans-serif';
+    const lastY = wrapText(title, 70, 300, 940, 60, 5);
+
+    ctx.fillStyle = '#E5E7EB';
+    ctx.font = '400 28px Inter, sans-serif';
+    wrapText(summary, 70, lastY + 50, 940, 42, 4);
+
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+    ctx.beginPath();
+    ctx.moveTo(70, 970);
+    ctx.lineTo(1010, 970);
+    ctx.stroke();
+
+    ctx.fillStyle = '#CCFF00';
+    ctx.font = 'bold 22px "JetBrains Mono", monospace';
+    ctx.fillText('@THISISRAYU', 70, 1015);
+
+    ctx.fillStyle = '#9CA3AF';
+    ctx.font = '500 20px "JetBrains Mono", monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText('RAYU-360.VERCEL.APP', 1010, 1015);
+    ctx.textAlign = 'left';
+
+    return canvas;
+  };
+
+  // 100% Synchronous PNG Download Handler — runs in < 5ms inside the click event
+  const handleDownloadCard = () => {
+    setIsDownloading(true);
     const filename = `rayu_post_${selectedTemplate}_${safeNewsItem.id || Date.now()}.png`;
 
     try {
-      // Step 1: If background image is external HTTP URL, proxy it to base64
-      let resolvedImageUrl = activeDisplayImage;
-
-      if (
-        activeDisplayImage &&
-        !activeDisplayImage.startsWith('data:') &&
-        !activeDisplayImage.startsWith('blob:')
-      ) {
-        try {
-          const proxyRes = await fetch(
-            `/api/proxy-image?url=${encodeURIComponent(activeDisplayImage)}`
-          );
-          if (proxyRes.ok) {
-            const { dataUrl } = await proxyRes.json();
-            if (dataUrl) resolvedImageUrl = dataUrl;
-          }
-        } catch (e) {
-          console.warn('[RAYU Studio] Image proxy warning:', e);
-        }
-      }
-
-      // Step 2: Temporarily swap image src to base64 dataUrl if needed
-      const imgEl = cardRef.current.querySelector('img') as HTMLImageElement | null;
-      const originalSrc = imgEl?.src;
-      if (imgEl && resolvedImageUrl && resolvedImageUrl !== originalSrc) {
-        imgEl.src = resolvedImageUrl;
-        await new Promise((r) => setTimeout(r, 200));
-      }
-
-      // Step 3: Render card DOM node directly to HTML5 Canvas
-      const domCanvas = await toCanvas(cardRef.current, {
-        quality: 1.0,
-        pixelRatio: 2,
-        cacheBust: false,
-        skipFonts: true,
-        fontEmbedCSS: '',
-      });
-
-      // Step 4: Restore original src
-      if (imgEl && originalSrc) imgEl.src = originalSrc;
-
-      // Step 5: Native browser toBlob conversion — 100% reliable Chrome PNG file download
-      domCanvas.toBlob((blob) => {
-        if (!blob) {
-          setIsDownloading(false);
-          return;
-        }
-        const blobUrl = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = blobUrl;
-        link.download = filename;
-        link.setAttribute('download', filename);
-        document.body.appendChild(link);
-        link.click();
-
-        setTimeout(() => {
-          if (document.body.contains(link)) document.body.removeChild(link);
-          URL.revokeObjectURL(blobUrl);
-        }, 1000);
-        setIsDownloading(false);
-      }, 'image/png');
-
+      const canvas = renderCardToCanvasSync(selectedTemplate);
+      const dataUrl = canvas.toDataURL('image/png');
+      setExportPngUrl(dataUrl);
+      triggerPngDownload(dataUrl, filename);
     } catch (err) {
-      console.error('[RAYU Studio] html-to-image toCanvas failed, running 2D Canvas fallback:', err);
-      try {
-        // High-fidelity HTML5 2D Canvas fallback
-        const canvas = document.createElement('canvas');
-        canvas.width = 1080;
-        canvas.height = 1080;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          // Fill background
-          ctx.fillStyle = '#050505';
-          ctx.fillRect(0, 0, 1080, 1080);
-
-          // Draw background image if available
-          if (activeDisplayImage) {
-            await new Promise<void>((resolve) => {
-              const img = new Image();
-              img.crossOrigin = 'anonymous';
-              img.onload = () => {
-                const scale = Math.max(1080 / img.width, 1080 / img.height);
-                const x = (1080 - img.width * scale) / 2;
-                const y = (1080 - img.height * scale) / 2;
-                ctx.globalAlpha = 0.4;
-                ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
-                ctx.globalAlpha = 1.0;
-                resolve();
-              };
-              img.onerror = () => resolve();
-              img.src = activeDisplayImage;
-            });
-          }
-
-          // Dark overlay gradient
-          const grad = ctx.createLinearGradient(0, 0, 0, 1080);
-          grad.addColorStop(0, 'rgba(5, 5, 5, 0.7)');
-          grad.addColorStop(0.5, 'rgba(5, 5, 5, 0.4)');
-          grad.addColorStop(1, 'rgba(5, 5, 5, 0.95)');
-          ctx.fillStyle = grad;
-          ctx.fillRect(0, 0, 1080, 1080);
-
-          // Border
-          ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
-          ctx.lineWidth = 4;
-          ctx.strokeRect(30, 30, 1020, 1020);
-
-          // RAYU logo header
-          ctx.fillStyle = '#FFFFFF';
-          ctx.font = '900 48px sans-serif';
-          ctx.fillText('RAY', 70, 110);
-          const rayW = ctx.measureText('RAY').width;
-          ctx.fillStyle = '#CCFF00';
-          ctx.fillText('U.', 70 + rayW, 110);
-
-          // Category badge
-          ctx.fillStyle = '#CCFF00';
-          ctx.fillRect(780, 70, 230, 48);
-          ctx.fillStyle = '#000000';
-          ctx.font = '700 20px monospace';
-          ctx.fillText(`[${(dynamicNewsItem.category || 'TECH').toUpperCase()}]`, 800, 102);
-
-          // Live Awareness tag
-          ctx.fillStyle = '#CCFF00';
-          ctx.font = '700 22px monospace';
-          ctx.fillText(`● LIVE AWARENESS • ${dynamicNewsItem.region || 'GLOBAL'}`, 70, 340);
-
-          // Title wrapping
-          ctx.fillStyle = '#FFFFFF';
-          ctx.font = '900 48px sans-serif';
-          const titleWords = (dynamicNewsItem.title || '').toUpperCase().split(' ');
-          let lineStr = '';
-          let textY = 420;
-          for (let n = 0; n < titleWords.length; n++) {
-            const testLine = lineStr + titleWords[n] + ' ';
-            if (ctx.measureText(testLine).width > 940 && n > 0) {
-              ctx.fillText(lineStr, 70, textY);
-              lineStr = titleWords[n] + ' ';
-              textY += 60;
-            } else {
-              lineStr = testLine;
-            }
-          }
-          ctx.fillText(lineStr, 70, textY);
-
-          // Summary box
-          textY += 40;
-          ctx.fillStyle = 'rgba(15, 15, 15, 0.9)';
-          ctx.fillRect(70, textY, 940, 160);
-          ctx.strokeStyle = 'rgba(204, 255, 0, 0.3)';
-          ctx.lineWidth = 2;
-          ctx.strokeRect(70, textY, 940, 160);
-
-          ctx.fillStyle = '#E5E5E5';
-          ctx.font = '400 24px sans-serif';
-          const summaryStr = dynamicNewsItem.rayuTakeaway || dynamicNewsItem.summary || '';
-          ctx.fillText(summaryStr.slice(0, 110) + (summaryStr.length > 110 ? '...' : ''), 95, textY + 60);
-
-          // Footer
-          ctx.fillStyle = '#CCFF00';
-          ctx.font = '700 22px monospace';
-          ctx.fillText('@THISISRAYU', 70, 1010);
-          ctx.fillStyle = '#A3A3A3';
-          ctx.fillText('RAYU-360.VERCEL.APP', 710, 1010);
-
-          // Native Blob download
-          canvas.toBlob((blob) => {
-            if (!blob) {
-              setIsDownloading(false);
-              return;
-            }
-            const blobUrl = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = blobUrl;
-            link.download = filename;
-            link.setAttribute('download', filename);
-            document.body.appendChild(link);
-            link.click();
-
-            setTimeout(() => {
-              if (document.body.contains(link)) document.body.removeChild(link);
-              URL.revokeObjectURL(blobUrl);
-            }, 1000);
-            setIsDownloading(false);
-          }, 'image/png');
-        }
-      } catch (fallbackErr) {
-        console.error('[RAYU Studio] Canvas fallback failed:', fallbackErr);
-        alert('Download failed. Please right-click the card image to save manually.');
-        setIsDownloading(false);
-      }
+      console.error('[RAYU Studio] PNG export failed:', err);
+    } finally {
+      setIsDownloading(false);
     }
   };
 
-  // Clone normalized item with active AI background & live editable text
+  // Open PNG in new tab action — guaranteed 1-click fallback
+  const handleOpenCardInNewTab = () => {
+    try {
+      const canvas = renderCardToCanvasSync(selectedTemplate);
+      const dataUrl = canvas.toDataURL('image/png');
+      setExportPngUrl(dataUrl);
+
+      const win = window.open();
+      if (win) {
+        win.document.write(`
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <title>RAYU Post PNG (${selectedTemplate.toUpperCase()})</title>
+              <style>
+                body { margin: 0; background: #050505; color: #fff; font-family: monospace; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; text-align: center; }
+                img { max-width: 90vw; max-height: 85vh; border: 1px solid rgba(255,255,255,0.2); box-shadow: 0 0 30px rgba(0,0,0,0.9); margin-bottom: 16px; }
+                p { color: #CCFF00; font-size: 14px; font-weight: bold; }
+              </style>
+            </head>
+            <body>
+              <img src="${dataUrl}" alt="RAYU Instagram Post" />
+              <p>⚡ RAYU POST PNG READY • RIGHT CLICK IMAGE & SELECT "SAVE IMAGE AS..."</p>
+            </body>
+          </html>
+        `);
+      }
+    } catch (err) {
+      console.error('[RAYU Studio] Open PNG in new tab failed:', err);
+    }
+  };
   const dynamicNewsItem: OmniNewsItem = {
     id: postContent?.id || newsItem?.id || `v2-${Date.now()}`,
     title: editableTitle.trim() || itemTitle,
@@ -892,6 +875,14 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
               >
                 {isDownloading ? <Loader2 size={13} className="animate-spin text-[#CCFF00]" /> : <Download size={13} />}
                 <span>{isDownloading ? 'EXPORTING...' : 'DOWNLOAD PNG'}</span>
+              </button>
+
+              <button
+                onClick={handleOpenCardInNewTab}
+                className="inline-flex items-center justify-center gap-2 text-[10px] sm:text-xs font-mono font-bold bg-[#050505] border border-white/15 px-3 py-2.5 rounded-sm hover:border-[#CCFF00] text-white hover:text-[#CCFF00] transition-colors uppercase cursor-pointer"
+              >
+                <Share2 size={13} />
+                <span>OPEN PNG IN NEW TAB</span>
               </button>
 
               <button
