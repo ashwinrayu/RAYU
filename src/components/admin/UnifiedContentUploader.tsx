@@ -59,6 +59,10 @@ export const UnifiedContentUploader: React.FC<Props> = ({ onPostContentCreated }
       reader.onloadend = () => {
         const dataUrl = reader.result as string;
         setImagePreview(dataUrl);
+        // Pre-fill placeholder while OCR processes
+        if (!headline || headline === 'THE REAL SHIFT IN TECH IS NOT CODE GENERATION BUT DIRECTION') {
+          setHeadline('EXTRACTING IMAGE CONTENT...');
+        }
         analyzeImageContent(dataUrl);
       };
       reader.readAsDataURL(file);
@@ -302,11 +306,10 @@ export const UnifiedContentUploader: React.FC<Props> = ({ onPostContentCreated }
         <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
           <div className="md:col-span-6">
             <label className="block text-xs font-mono font-bold text-neutral-300 uppercase mb-1">
-              HEADLINE (THE HOOK — REQUIRED):
+              HEADLINE / TITLE (AUTO-FILLED BY OCR OR CUSTOM):
             </label>
             <input
               type="text"
-              required
               value={headline}
               onChange={(e) => setHeadline(e.target.value)}
               placeholder="e.g. THE REAL SHIFT IN TECH IS NOT CODE GENERATION BUT DIRECTION"
