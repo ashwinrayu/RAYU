@@ -15,10 +15,22 @@ async function buildPromptWithGroq(
   title: string,
   summary: string,
   category: string,
+  storyUrl: string,
+  storyImageUrl: string,
+  fullArticleContent: string,
   groqKey: string
 ): Promise<{ prompt: string; rawResponse: any }> {
   console.log('[RAYU AI API] Requesting Groq Llama-3.1-8b prompt synthesis...');
-  
+
+  const contextDetails = [
+    `Headline: "${title}"`,
+    `Category: ${category}`,
+    `Summary: "${summary}"`,
+    storyUrl ? `Source URL: ${storyUrl}` : '',
+    storyImageUrl && !storyImageUrl.startsWith('data:') ? `Original Image Reference URL: ${storyImageUrl}` : '',
+    fullArticleContent ? `Full Article Text Excerpt: "${fullArticleContent.slice(0, 300)}"` : '',
+  ].filter(Boolean).join('\n');
+
   const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -30,14 +42,19 @@ async function buildPromptWithGroq(
       messages: [
         {
           role: 'system',
-          content: `You are an art director for RAYU digital magazine. Given a news headline and summary, describe ONE striking, hyper-realistic photographic scene (under 80 words) visually representing the subject. Rules: No text/words in image. End with: "Cinematic dark atmosphere, neon cyber-lime green accent lighting, 8k photorealistic render."`,
+          content: `You are an AI visual content analyzer and senior art director for RAYU digital magazine.
+Your task:
+1. Analyze the provided story headline, article excerpt, link, and original image reference to IDENTIFY the core subject matter, main physical objects/people/setting, and mood.
+2. Re-create ONE striking, hyper-realistic 8k photographic scene description (under 80 words) that visually re-imagines this identified subject specifically for RAYU's dark editorial aesthetic.
+3. Rules: No text, words, logos, or typography inside the image.
+4. End with: "Cinematic dark atmosphere, neon cyber-lime green (#CCFF00) accent lighting, 8k photorealistic render, lower third left clean empty dark negative space."`,
         },
         {
           role: 'user',
-          content: `Headline: "${title}"\nCategory: ${category}\nSummary: "${summary}"\n\nVisual scene description:`,
+          content: `Content to Analyze & Re-create Visual For:\n${contextDetails}\n\nRe-created Visual Scene Description:`,
         },
       ],
-      max_tokens: 180,
+      max_tokens: 200,
       temperature: 0.7,
     }),
   });
@@ -201,7 +218,15 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { title = '', category = '', summary = '', provider = 'AUTO' } = body;
+    const {
+      title = '',
+      category = '',
+      summary = '',
+      storyUrl = '',
+      storyImageUrl = '',
+      fullArticleContent = '',
+      provider = 'AUTO',
+    } = body;
 
     const openAiKey = (process.env.OPENAI_API_KEY || '').trim().replace(/^["']|["']$/g, '');
     const geminiKey = (process.env.GEMINI_API_KEY || '').trim().replace(/^["']|["']$/g, '');
@@ -212,6 +237,7 @@ export async function POST(req: NextRequest) {
     console.log(`[RAYU AI API] NEW GENERATION REQUEST`);
     console.log(`[RAYU AI API] Title: "${title}"`);
     console.log(`[RAYU AI API] Category: "${category}"`);
+    console.log(`[RAYU AI API] Source URL: "${storyUrl}"`);
     console.log(`[RAYU AI API] Requested Provider: "${provider}"`);
     console.log(`[RAYU AI API] Keys Present: OpenAI=${!!openAiKey}, Gemini=${!!geminiKey}, Groq=${!!groqKey}, HF=${!!hfKey}`);
     console.log(`========================================\n`);
@@ -222,9 +248,17 @@ export async function POST(req: NextRequest) {
 
     if (groqKey.startsWith('gsk_')) {
       try {
-        const groqResult = await buildPromptWithGroq(title, summary, category, groqKey);
+        const groqResult = await buildPromptWithGroq(
+          title,
+          summary,
+          category,
+          storyUrl,
+          storyImageUrl,
+          fullArticleContent,
+          groqKey
+        );
         visualPrompt = groqResult.prompt;
-        promptSource = 'Groq Llama-3.1-8b';
+        promptSource = 'Groq Llama-3.1-8b Content Analyzer';
       } catch (err: any) {
         console.error('[RAYU AI API] Groq prompt failed:', err.message);
         providerErrors['Groq Prompt'] = err.message;

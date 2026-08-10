@@ -85,6 +85,9 @@ export const InstagramPostStudio: React.FC<Props> = ({ newsItem }) => {
           title: newsItem.title,
           category: newsItem.category,
           summary: newsItem.summary,
+          storyUrl: newsItem.url,
+          storyImageUrl: newsItem.imageUrl,
+          fullArticleContent: newsItem.fullArticleContent,
           provider: aiProvider,
           layout: negativeZone,
         }),
@@ -126,7 +129,8 @@ export const InstagramPostStudio: React.FC<Props> = ({ newsItem }) => {
       setUploadedImageUrl(dataUrl);
       setCustomImageUrl(dataUrl);
       setImageSource('upload');
-      setImageLoaded(false);
+      setImageLoaded(true); // Mark loaded immediately for uploaded data URLs
+      setImageLoadError(null);
     };
     reader.readAsDataURL(file);
   };
@@ -626,8 +630,8 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
                 {/* Background AI Artwork Layer — with loading skeleton for slow Pollinations URLs */}
                 {activeDisplayImage && (
                   <>
-                    {/* Loading skeleton shown until image loads */}
-                    {!imageLoaded && (
+                    {/* Loading skeleton shown until image loads (only for AI images, not uploaded images) */}
+                    {!imageLoaded && imageSource !== 'upload' && (
                       <div className="absolute inset-0 bg-gradient-to-br from-[#0d0d0d] via-[#111] to-[#0a0a0a] animate-pulse flex flex-col items-center justify-center gap-3">
                         <div className="w-16 h-16 rounded-full border-2 border-[#CCFF00]/30 border-t-[#CCFF00] animate-spin" />
                         <span className="text-[10px] font-mono text-[#CCFF00]/60 uppercase tracking-widest">GENERATING AI VISUAL...</span>
@@ -635,12 +639,13 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
                       </div>
                     )}
                     <img
+                      key={activeDisplayImage}
                       src={activeDisplayImage}
                       alt={newsItem.title}
                       onLoad={() => setImageLoaded(true)}
                       onError={handleImageError}
                       className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${
-                        imageLoaded
+                        imageLoaded || imageSource === 'upload'
                           ? (isGeneratingAI ? 'opacity-20 scale-105' : 'opacity-40 scale-100')
                           : 'opacity-0'
                       }`}
