@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Copy, Download, Check, Sparkles, Share2, AlertCircle, Quote, Cpu, Newspaper, Loader2, Film, Layers, MessageSquare, LayoutGrid, Image as ImageIcon, RefreshCw, Zap } from 'lucide-react';
 import { OmniNewsItem } from '@/services/newsFetcher';
 import { INSTAGRAM_HANDLE, WEBSITE_DOMAIN } from '@/data/instagram';
-import { toPng } from 'html-to-image';
+import { toPng, toCanvas } from 'html-to-image';
 import { ReelsVideoStudio } from './ReelsVideoStudio';
 import { CarouselStudio } from './CarouselStudio';
 import { TwitterThreadStudio } from './TwitterThreadStudio';
@@ -359,6 +359,8 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
     if (!cardRef.current) return;
     setIsDownloading(true);
 
+    const filename = `rayu_post_${selectedTemplate}_${safeNewsItem.id || Date.now()}.png`;
+
     try {
       // Step 1: If background image is external HTTP URL, proxy it to base64
       let resolvedImageUrl = activeDisplayImage;
@@ -389,9 +391,8 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
         await new Promise((r) => setTimeout(r, 200));
       }
 
-      // Step 3: Export card as PNG using html-to-image
-      // IMPORTANT: cacheBust must be FALSE so data: base64 URLs are not corrupted with query params!
-      const pngDataUrl = await toPng(cardRef.current, {
+      // Step 3: Render card DOM node directly to HTML5 Canvas
+      const domCanvas = await toCanvas(cardRef.current, {
         quality: 1.0,
         pixelRatio: 2,
         cacheBust: false,
@@ -402,12 +403,29 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
       // Step 4: Restore original src
       if (imgEl && originalSrc) imgEl.src = originalSrc;
 
-      // Step 5: Trigger download with Blob URL so Chrome respects .png filename & extension
-      const filename = `rayu_post_${selectedTemplate}_${safeNewsItem.id || Date.now()}`;
-      triggerPngDownload(pngDataUrl, filename);
+      // Step 5: Native browser toBlob conversion — 100% reliable Chrome PNG file download
+      domCanvas.toBlob((blob) => {
+        if (!blob) {
+          setIsDownloading(false);
+          return;
+        }
+        const blobUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = filename;
+        link.setAttribute('download', filename);
+        document.body.appendChild(link);
+        link.click();
+
+        setTimeout(() => {
+          if (document.body.contains(link)) document.body.removeChild(link);
+          URL.revokeObjectURL(blobUrl);
+        }, 1000);
+        setIsDownloading(false);
+      }, 'image/png');
 
     } catch (err) {
-      console.error('[RAYU Studio] html-to-image export failed, running 2D Canvas fallback:', err);
+      console.error('[RAYU Studio] html-to-image toCanvas failed, running 2D Canvas fallback:', err);
       try {
         // High-fidelity HTML5 2D Canvas fallback
         const canvas = document.createElement('canvas');
@@ -509,16 +527,32 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
           ctx.fillStyle = '#A3A3A3';
           ctx.fillText('RAYU-360.VERCEL.APP', 710, 1010);
 
-          // Export & download with Blob helper
-          const fallbackPng = canvas.toDataURL('image/png');
-          triggerPngDownload(fallbackPng, `rayu_post_${selectedTemplate}_${safeNewsItem.id || Date.now()}`);
+          // Native Blob download
+          canvas.toBlob((blob) => {
+            if (!blob) {
+              setIsDownloading(false);
+              return;
+            }
+            const blobUrl = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = blobUrl;
+            link.download = filename;
+            link.setAttribute('download', filename);
+            document.body.appendChild(link);
+            link.click();
+
+            setTimeout(() => {
+              if (document.body.contains(link)) document.body.removeChild(link);
+              URL.revokeObjectURL(blobUrl);
+            }, 1000);
+            setIsDownloading(false);
+          }, 'image/png');
         }
       } catch (fallbackErr) {
         console.error('[RAYU Studio] Canvas fallback failed:', fallbackErr);
         alert('Download failed. Please right-click the card image to save manually.');
+        setIsDownloading(false);
       }
-    } finally {
-      setIsDownloading(false);
     }
   };
 

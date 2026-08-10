@@ -5,8 +5,7 @@ import { Download, Sparkles, Layers, ArrowRight, Plus, Trash2, Edit3, Check } fr
 import { OmniNewsItem } from '@/services/newsFetcher';
 import { PostContent } from '@/types/postContent';
 import { INSTAGRAM_HANDLE, WEBSITE_DOMAIN } from '@/data/instagram';
-import { toPng } from 'html-to-image';
-import { triggerPngDownload } from './InstagramPostStudio';
+import { toPng, toCanvas } from 'html-to-image';
 
 interface Props {
   newsItem?: OmniNewsItem;
@@ -98,8 +97,22 @@ export const CarouselStudio: React.FC<Props> = ({ newsItem, postContent }) => {
     if (!slideRef.current) return;
     setIsExporting(true);
     try {
-      const dataUrl = await toPng(slideRef.current, { quality: 1.0, pixelRatio: 2, cacheBust: false, skipFonts: true, fontEmbedCSS: '' });
-      triggerPngDownload(dataUrl, `rayu_carousel_slide_${activeSlideIndex + 1}.png`);
+      const domCanvas = await toCanvas(slideRef.current, { quality: 1.0, pixelRatio: 2, cacheBust: false, skipFonts: true, fontEmbedCSS: '' });
+      domCanvas.toBlob((blob) => {
+        if (!blob) return;
+        const blobUrl = URL.createObjectURL(blob);
+        const filename = `rayu_carousel_slide_${activeSlideIndex + 1}.png`;
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = filename;
+        link.setAttribute('download', filename);
+        document.body.appendChild(link);
+        link.click();
+        setTimeout(() => {
+          if (document.body.contains(link)) document.body.removeChild(link);
+          URL.revokeObjectURL(blobUrl);
+        }, 1000);
+      }, 'image/png');
     } catch (err) {
       console.error('Slide export error:', err);
     } finally {
@@ -115,8 +128,26 @@ export const CarouselStudio: React.FC<Props> = ({ newsItem, postContent }) => {
         setActiveSlideIndex(i);
         // Wait for slide to re-render in DOM
         await new Promise((r) => setTimeout(r, 400));
-        const dataUrl = await toPng(slideRef.current, { quality: 1.0, pixelRatio: 2, cacheBust: false, skipFonts: true, fontEmbedCSS: '' });
-        triggerPngDownload(dataUrl, `rayu_carousel_slide_${i + 1}_of_${slides.length}.png`);
+        const domCanvas = await toCanvas(slideRef.current, { quality: 1.0, pixelRatio: 2, cacheBust: false, skipFonts: true, fontEmbedCSS: '' });
+        await new Promise<void>((resolve) => {
+          domCanvas.toBlob((blob) => {
+            if (blob) {
+              const blobUrl = URL.createObjectURL(blob);
+              const filename = `rayu_carousel_slide_${i + 1}_of_${slides.length}.png`;
+              const link = document.createElement('a');
+              link.href = blobUrl;
+              link.download = filename;
+              link.setAttribute('download', filename);
+              document.body.appendChild(link);
+              link.click();
+              setTimeout(() => {
+                if (document.body.contains(link)) document.body.removeChild(link);
+                URL.revokeObjectURL(blobUrl);
+              }, 1000);
+            }
+            resolve();
+          }, 'image/png');
+        });
         await new Promise((r) => setTimeout(r, 200));
       }
     } catch (err) {
