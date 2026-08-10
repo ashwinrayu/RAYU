@@ -165,6 +165,60 @@ export const UnifiedContentUploader: React.FC<Props> = ({ onPostContentCreated }
     }
   };
 
+  // Analyze link URL via /api/analyze-link
+  const analyzeUrlContent = async (targetUrl: string) => {
+    if (!targetUrl || !targetUrl.startsWith('http')) {
+      setNotice('⚠️ Please enter a valid URL starting with http:// or https://');
+      return;
+    }
+    setIsAnalyzing(true);
+    setExtractionError(null);
+    setHeadline('⚡ FETCHING & EXTRACTING ARTICLE CONTENT FROM LINK...');
+    setNotice('⚡ Scraping webpage text & synthesizing headline (15s max)...');
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
+
+    try {
+      const res = await fetch('/api/analyze-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: targetUrl }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        if (data.title) setHeadline(data.title);
+        if (data.summary) setBodyText(data.summary);
+        if (data.rayuTakeaway) setTakeaway(data.rayuTakeaway);
+        if (data.category && ['TECH', 'WORLD', 'LIFE', 'LEARNINGS'].includes(data.category)) {
+          setCategory(data.category as PostCategory);
+        }
+        setNotice(`✅ EXTRACTED ARTICLE LINK CONTENT via ${data.providerUsed || 'Link Scraper'}`);
+      } else {
+        const errorMsg = data.error || `HTTP ${res.status} Link Extraction Failed`;
+        setExtractionError(errorMsg);
+        setHeadline('Extraction failed — enter headline manually');
+        setNotice(`❌ Link Extraction Failed: ${errorMsg}`);
+      }
+    } catch (err: any) {
+      clearTimeout(timeoutId);
+      const isTimeout = err.name === 'AbortError';
+      const failureDetail = isTimeout
+        ? 'Link extraction request timed out after 15 seconds.'
+        : `Network error: ${err.message || String(err)}`;
+
+      setExtractionError(failureDetail);
+      setHeadline('Extraction failed — enter headline manually');
+      setNotice(`❌ Link Extraction Error: ${failureDetail}`);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
   // 1-Click Preset Examples
   const applyPresetTake = () => {
     setInputMode('FREEFORM');
@@ -390,17 +444,35 @@ export const UnifiedContentUploader: React.FC<Props> = ({ onPostContentCreated }
         )}
 
         {inputMode === 'URL' && (
-          <div>
+          <div className="p-4 bg-[#050505] border border-dashed border-white/20 rounded-sm space-y-3">
             <label className="block text-xs font-mono font-bold text-neutral-300 uppercase mb-1">
-              PASTE ARTICLE OR RESOURCE LINK URL:
+              PASTE ARTICLE OR RESOURCE LINK URL TO EXTRACT CONTENT:
             </label>
-            <input
-              type="url"
-              value={sourceUrl}
-              onChange={(e) => setSourceUrl(e.target.value)}
-              placeholder="https://domain.com/article..."
-              className="w-full bg-[#050505] border border-white/20 focus:border-[#CCFF00] px-4 py-2.5 text-xs text-white rounded-sm outline-none font-mono"
-            />
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input
+                type="url"
+                value={sourceUrl}
+                onChange={(e) => setSourceUrl(e.target.value)}
+                placeholder="https://domain.com/article..."
+                className="flex-1 bg-[#0a0a0a] border border-white/20 focus:border-[#CCFF00] px-4 py-2.5 text-xs text-white rounded-sm outline-none font-mono"
+              />
+              <button
+                type="button"
+                onClick={() => analyzeUrlContent(sourceUrl)}
+                disabled={isAnalyzing}
+                className="px-4 py-2.5 bg-[#CCFF00] text-black text-xs font-mono font-bold uppercase rounded-sm hover:bg-[#b5e600] transition-all cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap"
+              >
+                <Sparkles size={14} />
+                <span>{isAnalyzing ? 'SCRAPING...' : '⚡ EXTRACT LINK CONTENT'}</span>
+              </button>
+            </div>
+            {notice && (
+              <div className={`text-xs font-mono p-2 border rounded-sm ${
+                extractionError ? 'bg-red-950/90 border-red-500 text-red-200 font-bold' : 'bg-[#CCFF00]/10 border-[#CCFF00]/30 text-[#CCFF00]'
+              }`}>
+                {notice}
+              </div>
+            )}
           </div>
         )}
 
