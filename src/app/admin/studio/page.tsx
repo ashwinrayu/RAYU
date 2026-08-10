@@ -10,14 +10,14 @@ import { OMNI_NEWS_DATA, OmniNewsItem } from '@/services/newsFetcher';
 import { ARTICLES_DATA } from '@/data/articles';
 import { THOUGHTS_DATA } from '@/data/thoughts';
 import { RESOURCES_DATA } from '@/data/resources';
-import { Sparkles, LogOut, CheckCircle2, Lock, Mail, ArrowRight, ShieldCheck, Newspaper, MessageSquare, Wrench, Radio, PlusCircle, Layers } from 'lucide-react';
+import { Sparkles, LogOut, CheckCircle2, Lock, Mail, ArrowRight, ShieldCheck, Newspaper, MessageSquare, Wrench, Radio, PlusCircle, Layers, Loader2 } from 'lucide-react';
 import { INSTAGRAM_HANDLE } from '@/data/instagram';
 import { PostContent } from '@/types/postContent';
 
 type ContentSourceType = 'CUSTOM' | 'NEWS' | 'ARTICLES' | 'THOUGHTS' | 'RESOURCES';
 
 export default function AdminStudioPage() {
-  const { isLoggedIn, user, login, logout } = useAuth();
+  const { isLoggedIn, user, isLoading, login, logout } = useAuth();
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [activeSource, setActiveSource] = useState<ContentSourceType>('NEWS');
   const [customStories, setCustomStories] = useState<OmniNewsItem[]>([]);
@@ -29,7 +29,8 @@ export default function AdminStudioPage() {
   const [password, setPassword] = useState('');
 
   useEffect(() => {
-    if (isLoggedIn) {
+    const stored = typeof window !== 'undefined' ? localStorage.getItem('rayu_creator_session') : null;
+    if (isLoggedIn || stored) {
       setIsUnlocked(true);
     }
   }, [isLoggedIn]);
@@ -130,6 +131,17 @@ export default function AdminStudioPage() {
   }, [activeSource, customStories, articleItems, thoughtItems, resourceItems]);
 
   // Protected Access Gate if not logged in & not unlocked
+  if (isLoading) {
+    return (
+      <div className="bg-[#050505] text-white pt-36 pb-24 min-h-screen flex items-center justify-center font-mono">
+        <div className="flex items-center gap-3 text-[#CCFF00]">
+          <Loader2 size={22} className="animate-spin" />
+          <span className="text-xs uppercase tracking-widest font-bold">VERIFYING CREATOR SESSION...</span>
+        </div>
+      </div>
+    );
+  }
+
   if (!isLoggedIn && !isUnlocked) {
     return (
       <div className="bg-[#050505] text-white pt-36 pb-24 min-h-screen flex items-center justify-center">
