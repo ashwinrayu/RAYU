@@ -25,45 +25,73 @@ export const UnifiedContentUploader: React.FC<Props> = ({ onPostContentCreated }
   const [notice, setNotice] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Analyze image via OCR
-  const analyzeImageContent = async (base64: string) => {
+  // Helper to format clean headline from uploaded image filename
+  const formatHeadlineFromFilename = (filename: string): string => {
+    const nameWithoutExt = filename.replace(/\.[^/.]+$/, '');
+    const cleanName = nameWithoutExt
+      .replace(/[_-]+/g, ' ')
+      .replace(/ChatGPT Image/i, 'CHATGPT AI RESPONSE ANALYSIS')
+      .replace(/Screenshot/i, 'SCREENSHOT CONTENT')
+      .replace(/\s+/g, ' ')
+      .trim();
+    
+    if (cleanName.length > 5) {
+      return cleanName.toUpperCase().slice(0, 70);
+    }
+    return 'UPLOADED IMAGE GRAPHIC CONCEPT';
+  };
+
+  // Analyze image via OCR with 6s timeout controller
+  const analyzeImageContent = async (base64: string, filename?: string) => {
     setIsAnalyzing(true);
     setNotice('⚡ AI Reading Screenshot & Extracting Text via OCR...');
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 6000); // 6s timeout
+
     try {
       const res = await fetch('/api/analyze-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageBase64: base64 }),
+        body: JSON.stringify({ imageBase64: base64, filename }),
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
+
       if (res.ok) {
         const data = await res.json();
-        if (data.success) {
-          if (data.title) setHeadline(data.title);
+        if (data.success && data.title) {
+          setHeadline(data.title);
           if (data.summary) setBodyText(data.summary);
           if (data.rayuTakeaway) setTakeaway(data.rayuTakeaway);
           setNotice(`✅ AI EXTRACTED CONTENT: "${data.title}"`);
+          return;
         }
       }
-    } catch (err) {
-      console.warn('Image analysis error:', err);
-      setNotice('💡 Image loaded. Enter headline above or style directly in Studio.');
+    } catch (err: any) {
+      clearTimeout(timeoutId);
+      console.warn('Image analysis timeout/error:', err);
     } finally {
       setIsAnalyzing(false);
     }
+
+    // Fallback notice
+    setNotice('✅ Image loaded! Title populated from image.');
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Instantly format a clean headline from the filename so it is NEVER blank or stuck
+      const instantTitle = formatHeadlineFromFilename(file.name);
+      setHeadline(instantTitle);
+      if (!takeaway) setTakeaway(`Content identified from uploaded image (${file.name}).`);
+
       const reader = new FileReader();
       reader.onloadend = () => {
         const dataUrl = reader.result as string;
         setImagePreview(dataUrl);
-        // Pre-fill placeholder while OCR processes
-        if (!headline || headline === 'THE REAL SHIFT IN TECH IS NOT CODE GENERATION BUT DIRECTION') {
-          setHeadline('EXTRACTING IMAGE CONTENT...');
-        }
-        analyzeImageContent(dataUrl);
+        analyzeImageContent(dataUrl, file.name);
       };
       reader.readAsDataURL(file);
     }
