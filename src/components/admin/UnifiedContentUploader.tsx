@@ -41,13 +41,13 @@ export const UnifiedContentUploader: React.FC<Props> = ({ onPostContentCreated }
     return 'UPLOADED IMAGE GRAPHIC CONCEPT';
   };
 
-  // Analyze image via OCR with 6s timeout controller
+  // Analyze image via Groq Vision API & OCR with 10s timeout controller
   const analyzeImageContent = async (base64: string, filename?: string) => {
     setIsAnalyzing(true);
-    setNotice('⚡ AI Reading Screenshot & Extracting Text via OCR...');
+    setNotice('⚡ Groq Vision Reading Image Text & Visual Content...');
     
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 6000); // 6s timeout
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
 
     try {
       const res = await fetch('/api/analyze-image', {
@@ -64,19 +64,19 @@ export const UnifiedContentUploader: React.FC<Props> = ({ onPostContentCreated }
           setHeadline(data.title);
           if (data.summary) setBodyText(data.summary);
           if (data.rayuTakeaway) setTakeaway(data.rayuTakeaway);
-          setNotice(`✅ AI EXTRACTED CONTENT: "${data.title}"`);
+          setNotice(`✅ VISION AI EXTRACTED TITLE: "${data.title}"`);
           return;
         }
       }
     } catch (err: any) {
       clearTimeout(timeoutId);
-      console.warn('Image analysis timeout/error:', err);
+      console.warn('Vision analysis timeout/error:', err);
     } finally {
       setIsAnalyzing(false);
     }
 
     // Fallback notice
-    setNotice('✅ Image loaded! Title populated from image.');
+    setNotice('✅ Image loaded! Style directly into Studio below.');
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
