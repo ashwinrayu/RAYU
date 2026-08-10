@@ -198,14 +198,35 @@ async function generateWithHuggingFace(
 async function generateWithPollinations(
   prompt: string
 ): Promise<{ imageUrl: string }> {
-  console.log('[RAYU AI API] Instantly constructing Pollinations AI Flux URL...');
+  console.log('[RAYU AI API] Fetching Pollinations AI Flux image (server-side)...');
   const seed = Math.floor(Math.random() * 999999);
   // Keep prompt concise and clean for URL encoding
   const cleanPrompt = prompt.slice(0, 250).replace(/[^\w\s,.-]/g, '');
   const encoded = encodeURIComponent(cleanPrompt);
-  const imageUrl = `https://image.pollinations.ai/prompt/${encoded}?width=1080&height=1080&nologo=true&seed=${seed}&model=flux`;
-  
-  return { imageUrl };
+  const pollinationsUrl = `https://image.pollinations.ai/prompt/${encoded}?width=1024&height=1024&nologo=true&seed=${seed}&model=flux`;
+
+  console.log(`[RAYU AI API] Pollinations URL: ${pollinationsUrl.slice(0, 120)}...`);
+
+  // Fetch the image server-side with 45s timeout (Pollinations generates on demand)
+  const imgRes = await fetch(pollinationsUrl, {
+    signal: AbortSignal.timeout(45000),
+    headers: { 'Accept': 'image/*' },
+  });
+
+  console.log(`[RAYU AI API] Pollinations image HTTP: ${imgRes.status}, type: ${imgRes.headers.get('content-type')}`);
+
+  if (!imgRes.ok) {
+    throw new Error(`Pollinations HTTP ${imgRes.status} ${imgRes.statusText}`);
+  }
+
+  const contentType = imgRes.headers.get('content-type') || 'image/jpeg';
+  const arrayBuffer = await imgRes.arrayBuffer();
+  const base64 = Buffer.from(arrayBuffer).toString('base64');
+  const dataUrl = `data:${contentType};base64,${base64}`;
+
+  console.log(`[RAYU AI API] Pollinations image received: ${Math.round(arrayBuffer.byteLength / 1024)}KB`);
+
+  return { imageUrl: dataUrl };
 }
 
 // ── Main Route POST Handler ─────────────────────────────────────────────────
