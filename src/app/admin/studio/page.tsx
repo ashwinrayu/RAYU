@@ -3,6 +3,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { InstagramPostStudio } from '@/components/admin/InstagramPostStudio';
+import { ApiKeysStatusPanel } from '@/components/admin/ApiKeysStatusPanel';
+import { UnifiedContentUploader } from '@/components/admin/UnifiedContentUploader';
 import { CustomNewsUploader } from '@/components/admin/CustomNewsUploader';
 import { OMNI_NEWS_DATA, OmniNewsItem } from '@/services/newsFetcher';
 import { ARTICLES_DATA } from '@/data/articles';
@@ -10,6 +12,7 @@ import { THOUGHTS_DATA } from '@/data/thoughts';
 import { RESOURCES_DATA } from '@/data/resources';
 import { Sparkles, LogOut, CheckCircle2, Lock, Mail, ArrowRight, ShieldCheck, Newspaper, MessageSquare, Wrench, Radio, PlusCircle, Layers } from 'lucide-react';
 import { INSTAGRAM_HANDLE } from '@/data/instagram';
+import { PostContent } from '@/types/postContent';
 
 type ContentSourceType = 'CUSTOM' | 'NEWS' | 'ARTICLES' | 'THOUGHTS' | 'RESOURCES';
 
@@ -19,6 +22,7 @@ export default function AdminStudioPage() {
   const [activeSource, setActiveSource] = useState<ContentSourceType>('NEWS');
   const [customStories, setCustomStories] = useState<OmniNewsItem[]>([]);
   const [selectedStory, setSelectedStory] = useState<OmniNewsItem>(OMNI_NEWS_DATA[0]);
+  const [activePostContent, setActivePostContent] = useState<PostContent | null>(null);
 
   // Production login form state
   const [email, setEmail] = useState('');
@@ -223,8 +227,33 @@ export default function AdminStudioPage() {
           </div>
         </div>
 
-        {/* Custom News Uploader Tool */}
-        <CustomNewsUploader onCustomNewsCreated={handleCustomNewsCreated} />
+        {/* API Key Status & Diagnostics Panel */}
+        <ApiKeysStatusPanel />
+
+        {/* Unified V2 Content Studio Uploader */}
+        <UnifiedContentUploader
+          onPostContentCreated={(newContent) => {
+            setActivePostContent(newContent);
+            const convertedStory: OmniNewsItem = {
+              id: newContent.id,
+              title: newContent.headline,
+              summary: newContent.body || newContent.headline,
+              fullArticleContent: newContent.body || newContent.headline,
+              keyFacts: [`Type: ${newContent.contentType}`, `Category: ${newContent.category}`],
+              rayuTakeaway: newContent.rayuTakeaway || newContent.headline,
+              url: newContent.sourceUrl || 'https://rayu-360.vercel.app',
+              source: 'RAYU V2 STUDIO',
+              category: newContent.category as any,
+              region: 'GLOBAL',
+              dateGroup: 'TODAY',
+              publishedAt: 'JUST NOW',
+              readTime: '2 MIN READ',
+              imageUrl: newContent.sourceImage || '/images/gta_vice_city.png',
+              badgeColor: '#CCFF00',
+            };
+            setSelectedStory(convertedStory);
+          }}
+        />
 
         {/* Content Source Selection Bar */}
         <div className="mb-6">
@@ -360,7 +389,7 @@ export default function AdminStudioPage() {
         </div>
 
         {/* Selected Story Instagram Studio Component */}
-        <InstagramPostStudio newsItem={selectedStory} />
+        <InstagramPostStudio newsItem={selectedStory} postContent={activePostContent || undefined} />
       </div>
     </div>
   );

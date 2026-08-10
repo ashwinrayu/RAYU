@@ -10,24 +10,53 @@ import { CarouselStudio } from './CarouselStudio';
 import { TwitterThreadStudio } from './TwitterThreadStudio';
 import { generateInStudioAiVisual } from '@/utils/aiImageGenerator';
 
+import { PostContent } from '@/types/postContent';
+
 interface Props {
-  newsItem: OmniNewsItem;
+  newsItem?: OmniNewsItem;
+  postContent?: PostContent;
 }
 
 export const TEMPLATES = [
-  { id: 't1', name: '01. KINETIC MINIMAL', icon: Sparkles, color: '#CCFF00' },
+  { id: 't1', name: '01. HEADLINE DOMINANT', icon: Sparkles, color: '#CCFF00' },
   { id: 't2', name: '02. EDITORIAL ESSAY', icon: Newspaper, color: '#FFFFFF' },
-  { id: 't3', name: '03. BREAKING ALERT', icon: AlertCircle, color: '#FF4D4D' },
+  { id: 't3', name: '03. QUOTE SPOTLIGHT', icon: Quote, color: '#FFB800' },
   { id: 't4', name: '04. TECH DATA GRID', icon: Cpu, color: '#00F0FF' },
-  { id: 't5', name: '05. QUOTE SPOTLIGHT', icon: Quote, color: '#FFB800' },
+  { id: 't5', name: '05. LIST BREAKDOWN', icon: LayoutGrid, color: '#FF00AA' },
 ];
 
-export const InstagramPostStudio: React.FC<Props> = ({ newsItem }) => {
+export const InstagramPostStudio: React.FC<Props> = ({ newsItem, postContent }) => {
+  // Normalize item parameters
+  const itemTitle = postContent?.headline || newsItem?.title || 'UNTITLED POST';
+  const itemCategory = postContent?.category || newsItem?.category || 'TECH';
+  const itemSummary = postContent?.body || newsItem?.summary || '';
+  const itemTakeaway = postContent?.rayuTakeaway || newsItem?.rayuTakeaway || itemSummary;
+  const itemType = postContent?.contentType || 'TAKE';
+
+  const safeNewsItem = newsItem || {
+    id: 'default',
+    title: itemTitle,
+    summary: itemSummary,
+    fullArticleContent: itemSummary,
+    keyFacts: [],
+    rayuTakeaway: itemTakeaway,
+    url: 'https://rayu-360.vercel.app',
+    source: 'RAYU V2 STUDIO',
+    category: itemCategory as any,
+    region: 'GLOBAL',
+    dateGroup: 'TODAY',
+    publishedAt: 'JUST NOW',
+    readTime: '2 MIN',
+    imageUrl: '/images/gta_vice_city.png',
+    badgeColor: '#CCFF00',
+  };
+
   const [studioFormat, setStudioFormat] = useState<'single' | 'reels' | 'carousel' | 'twitter'>('single');
   const [selectedTemplate, setSelectedTemplate] = useState('t1');
   const [copied, setCopied] = useState(false);
   const [published, setPublished] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [aspectRatio, setAspectRatio] = useState<'1:1' | '4:5'>(postContent?.aspectRatio || '1:1');
 
   // Hybrid AI Generator Controls
   const [aiProvider, setAiProvider] = useState<'OPENAI' | 'GEMINI' | 'AUTO'>('OPENAI');
@@ -44,16 +73,16 @@ export const InstagramPostStudio: React.FC<Props> = ({ newsItem }) => {
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
 
   // Live Editable Text Overlay Controls
-  const [editableTitle, setEditableTitle] = useState<string>(newsItem.title);
-  const [editableSummary, setEditableSummary] = useState<string>(newsItem.summary);
-  const [editableTakeaway, setEditableTakeaway] = useState<string>(newsItem.rayuTakeaway || '');
+  const [editableTitle, setEditableTitle] = useState<string>(itemTitle);
+  const [editableSummary, setEditableSummary] = useState<string>(itemSummary);
+  const [editableTakeaway, setEditableTakeaway] = useState<string>(itemTakeaway);
 
-  // Reset editable text whenever newsItem changes
+  // Reset editable text whenever item parameters change
   useEffect(() => {
-    setEditableTitle(newsItem.title);
-    setEditableSummary(newsItem.summary);
-    setEditableTakeaway(newsItem.rayuTakeaway || '');
-  }, [newsItem.id, newsItem.title, newsItem.summary]);
+    setEditableTitle(itemTitle);
+    setEditableSummary(itemSummary);
+    setEditableTakeaway(itemTakeaway);
+  }, [itemTitle, itemSummary, itemTakeaway]);
 
   // Custom image upload state
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
@@ -63,7 +92,7 @@ export const InstagramPostStudio: React.FC<Props> = ({ newsItem }) => {
   // Auto-generate AI background on story change
   useEffect(() => {
     handleGenerateServerAiBackground();
-  }, [newsItem.id, newsItem.title, aiProvider, negativeZone]);
+  }, [itemTitle, itemCategory, aiProvider, negativeZone]);
 
   // Elapsed timer tracking
   useEffect(() => {
@@ -94,12 +123,12 @@ export const InstagramPostStudio: React.FC<Props> = ({ newsItem }) => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: newsItem.title,
-          category: newsItem.category,
-          summary: newsItem.summary,
-          storyUrl: newsItem.url,
-          storyImageUrl: newsItem.imageUrl,
-          fullArticleContent: newsItem.fullArticleContent,
+          title: itemTitle,
+          category: itemCategory,
+          summary: itemSummary,
+          storyUrl: postContent?.sourceUrl || newsItem?.url,
+          storyImageUrl: postContent?.sourceImage || newsItem?.imageUrl,
+          fullArticleContent: postContent?.body || newsItem?.fullArticleContent,
           provider: aiProvider,
           layout: negativeZone,
         }),
@@ -202,26 +231,26 @@ export const InstagramPostStudio: React.FC<Props> = ({ newsItem }) => {
     setImageLoadError('Failed to load background image from target URL.');
   };
 
-  const activeDisplayImage = customImageUrl || newsItem.imageUrl || '';
+  const activeDisplayImage = customImageUrl || safeNewsItem.imageUrl || '';
 
   // Generate Instagram Caption
-  const instagramCaption = `⚡ RAYU SOCIAL STREAM: [${newsItem.category}]
+  const instagramCaption = `⚡ RAYU SOCIAL STREAM: [${safeNewsItem.category}]
 
-${newsItem.title.toUpperCase()}
+${safeNewsItem.title.toUpperCase()}
 
-📍 Region: ${newsItem.region}
-⏱️ Published: ${newsItem.publishedAt}
+📍 Region: ${safeNewsItem.region}
+⏱️ Published: ${safeNewsItem.publishedAt}
 
 Summary:
-${newsItem.summary}
+${safeNewsItem.summary}
 
 💡 RAYU'S UNFILTERED TAKEAWAY:
-"${newsItem.rayuTakeaway || newsItem.summary}"
+"${safeNewsItem.rayuTakeaway || safeNewsItem.summary}"
 
 🔗 Full analysis & primary sources live at ${WEBSITE_DOMAIN}
 Link in bio 👉 @${INSTAGRAM_HANDLE}
 
-#RAYU #thisisrayu #IndiaTech #TechNews #GlobalShift #${newsItem.category} #${newsItem.region}`;
+#RAYU #thisisrayu #IndiaTech #TechNews #GlobalShift #${safeNewsItem.category} #${safeNewsItem.region}`;
 
   const handleCopyCaption = () => {
     navigator.clipboard.writeText(instagramCaption);
@@ -294,7 +323,7 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
 
       // Step 5: Trigger download
       const link = document.createElement('a');
-      link.download = `rayu-post-${selectedTemplate}-${newsItem.id}.png`;
+      link.download = `rayu-post-${selectedTemplate}-${safeNewsItem.id}.png`;
       link.href = pngDataUrl;
       document.body.appendChild(link);
       link.click();
@@ -309,7 +338,7 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
           const blob = await res.blob();
           const blobUrl = URL.createObjectURL(blob);
           const link = document.createElement('a');
-          link.download = `rayu-post-${newsItem.id}.jpg`;
+          link.download = `rayu-post-${safeNewsItem.id}.jpg`;
           link.href = blobUrl;
           document.body.appendChild(link);
           link.click();
@@ -324,13 +353,23 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
     }
   };
 
-  // Clone newsItem with active AI background & live editable text
+  // Clone normalized item with active AI background & live editable text
   const dynamicNewsItem: OmniNewsItem = {
-    ...newsItem,
-    title: editableTitle.trim() || newsItem.title,
-    summary: editableSummary.trim() || newsItem.summary,
-    rayuTakeaway: editableTakeaway.trim() || newsItem.rayuTakeaway,
+    id: postContent?.id || newsItem?.id || `v2-${Date.now()}`,
+    title: editableTitle.trim() || itemTitle,
+    summary: editableSummary.trim() || itemSummary,
+    fullArticleContent: editableSummary.trim() || itemSummary,
+    keyFacts: ['V2 Studio Content'],
+    rayuTakeaway: editableTakeaway.trim() || itemTakeaway,
+    category: itemCategory as any,
+    region: 'GLOBAL',
+    publishedAt: 'JUST NOW',
+    readTime: '2 MIN',
+    url: postContent?.sourceUrl || newsItem?.url || WEBSITE_DOMAIN,
+    source: 'RAYU V2 STUDIO',
+    dateGroup: 'TODAY',
     imageUrl: activeDisplayImage,
+    badgeColor: '#CCFF00',
   };
 
   return (
@@ -715,7 +754,7 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
                     <img
                       key={activeDisplayImage}
                       src={activeDisplayImage}
-                      alt={newsItem.title}
+                      alt={safeNewsItem.title}
                       onLoad={() => setImageLoaded(true)}
                       onError={handleImageError}
                       className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${
@@ -732,12 +771,12 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
                   <>
                     <div className="relative z-10 flex items-center justify-between border-b border-white/15 pb-4">
                       <div className="text-2xl font-black text-white">RAY<span className="text-[#CCFF00]">U.</span></div>
-                      <div className="text-[10px] font-mono font-bold px-2.5 py-1 bg-[#CCFF00] text-black rounded-sm uppercase">[{newsItem.category}]</div>
+                      <div className="text-[10px] font-mono font-bold px-2.5 py-1 bg-[#CCFF00] text-black rounded-sm uppercase">[{dynamicNewsItem.category}]</div>
                     </div>
                     <div className="relative z-10 my-auto py-4">
-                      <span className="text-[10px] font-mono text-[#CCFF00] uppercase block mb-2">● LIVE AWARENESS • {newsItem.region}</span>
-                      <h4 className="text-xl sm:text-2xl font-black text-white leading-tight uppercase mb-3 drop-shadow-md">{newsItem.title}</h4>
-                      <p className="text-xs text-neutral-200 line-clamp-3 leading-relaxed">{newsItem.summary}</p>
+                      <span className="text-[10px] font-mono text-[#CCFF00] uppercase block mb-2">● LIVE AWARENESS • {dynamicNewsItem.region}</span>
+                      <h4 className="text-xl sm:text-2xl font-black text-white leading-tight uppercase mb-3 drop-shadow-md">{dynamicNewsItem.title}</h4>
+                      <p className="text-xs text-neutral-200 line-clamp-3 leading-relaxed">{dynamicNewsItem.summary}</p>
                     </div>
                     <div className="relative z-10 pt-4 border-t border-white/15 flex items-center justify-between text-[10px] font-mono text-neutral-300">
                       <span className="text-[#CCFF00] font-bold">@THISISRAYU</span>
@@ -751,12 +790,12 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
                   <>
                     <div className="relative z-10 flex items-center justify-between border-b border-white/20 pb-3">
                       <span className="text-xs font-mono font-bold tracking-widest text-neutral-400 uppercase">RAYU EDITORIAL</span>
-                      <span className="text-[10px] font-mono text-neutral-500 uppercase">{newsItem.publishedAt}</span>
+                      <span className="text-[10px] font-mono text-neutral-500 uppercase">{dynamicNewsItem.publishedAt}</span>
                     </div>
                     <div className="relative z-10 my-auto p-4 bg-[#090909]/90 border border-white/10 rounded-sm backdrop-blur-md">
-                      <div className="text-[10px] font-mono text-[#CCFF00] mb-2 uppercase font-bold">[{newsItem.category} ESSAY]</div>
-                      <h4 className="text-2xl font-serif text-white font-bold leading-tight mb-3">{newsItem.title}</h4>
-                      <p className="text-xs text-neutral-300 leading-relaxed italic">"{newsItem.rayuTakeaway || newsItem.summary}"</p>
+                      <div className="text-[10px] font-mono text-[#CCFF00] mb-2 uppercase font-bold">[{dynamicNewsItem.category} ESSAY]</div>
+                      <h4 className="text-2xl font-serif text-white font-bold leading-tight mb-3">{dynamicNewsItem.title}</h4>
+                      <p className="text-xs text-neutral-300 leading-relaxed italic">"{dynamicNewsItem.rayuTakeaway || dynamicNewsItem.summary}"</p>
                     </div>
                     <div className="relative z-10 pt-3 border-t border-white/20 flex items-center justify-between text-[10px] font-mono">
                       <span className="text-white font-bold">BY RAYU (@THISISRAYU)</span>
@@ -770,12 +809,12 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
                   <>
                     <div className="relative z-10 bg-red-500 text-black px-4 py-2 font-mono font-black text-xs uppercase tracking-widest flex items-center justify-between">
                       <span>⚡ BREAKING AWARENESS ALERT</span>
-                      <span>[{newsItem.region}]</span>
+                      <span>[{dynamicNewsItem.region}]</span>
                     </div>
                     <div className="relative z-10 my-auto py-4">
-                      <h4 className="text-2xl font-black text-white leading-tight uppercase mb-4 text-red-400">{newsItem.title}</h4>
+                      <h4 className="text-2xl font-black text-white leading-tight uppercase mb-4 text-red-400">{dynamicNewsItem.title}</h4>
                       <div className="p-4 bg-red-950/80 border border-red-500/40 rounded-sm text-xs text-neutral-200 leading-relaxed font-mono backdrop-blur-md">
-                        {newsItem.summary}
+                        {dynamicNewsItem.summary}
                       </div>
                     </div>
                     <div className="relative z-10 pt-3 border-t border-red-500/40 flex items-center justify-between text-[10px] font-mono text-neutral-400">
@@ -789,21 +828,21 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
                 {selectedTemplate === 't4' && (
                   <>
                     <div className="relative z-10 flex items-center justify-between font-mono text-[10px] border-b border-[#00F0FF]/30 pb-3 text-[#00F0FF]">
-                      <span>SYSTEM_ID: RAYU-{newsItem.id.toUpperCase()}</span>
+                      <span>SYSTEM_ID: RAYU-{dynamicNewsItem.id.toUpperCase()}</span>
                       <span>DATA_STREAM</span>
                     </div>
                     <div className="relative z-10 my-auto py-2">
-                      <h4 className="text-xl font-mono font-bold text-[#00F0FF] uppercase mb-4">{newsItem.title}</h4>
-                      {newsItem.keyFacts && newsItem.keyFacts.length > 0 ? (
+                      <h4 className="text-xl font-mono font-bold text-[#00F0FF] uppercase mb-4">{dynamicNewsItem.title}</h4>
+                      {dynamicNewsItem.keyFacts && dynamicNewsItem.keyFacts.length > 0 ? (
                         <div className="space-y-2">
-                          {newsItem.keyFacts.slice(0, 3).map((f, i) => (
+                          {dynamicNewsItem.keyFacts.slice(0, 3).map((f, i) => (
                             <div key={i} className="text-xs font-mono text-neutral-300 bg-neutral-900/90 p-2.5 border border-white/10 rounded-sm backdrop-blur-md">
                               <span className="text-[#00F0FF] font-bold">[{i + 1}]</span> {f}
                             </div>
                           ))}
                         </div>
                       ) : (
-                        <p className="text-xs font-mono text-neutral-300">{newsItem.summary}</p>
+                        <p className="text-xs font-mono text-neutral-300">{dynamicNewsItem.summary}</p>
                       )}
                     </div>
                     <div className="relative z-10 pt-3 border-t border-[#00F0FF]/30 flex items-center justify-between text-[10px] font-mono text-neutral-400">
@@ -823,7 +862,7 @@ Link in bio 👉 @${INSTAGRAM_HANDLE}
                     <div className="relative z-10 my-auto text-center px-4">
                       <Quote size={32} className="text-[#FFB800] mx-auto mb-3 opacity-60" />
                       <p className="text-lg sm:text-xl font-bold text-white leading-relaxed italic mb-4">
-                        "{newsItem.rayuTakeaway || newsItem.summary}"
+                        "{dynamicNewsItem.rayuTakeaway || dynamicNewsItem.summary}"
                       </p>
                       <span className="text-xs font-mono text-neutral-400 uppercase tracking-widest">— RAYU (@THISISRAYU)</span>
                     </div>

@@ -1,227 +1,244 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, Volume2, Download, Sparkles, Radio, Check, RefreshCw, Film } from 'lucide-react';
+import { Play, Pause, Download, Sparkles, Film, Video, Check, RefreshCw } from 'lucide-react';
 import { OmniNewsItem } from '@/services/newsFetcher';
-import { INSTAGRAM_HANDLE } from '@/data/instagram';
-import { toPng } from 'html-to-image';
+import { PostContent } from '@/types/postContent';
+import { INSTAGRAM_HANDLE, WEBSITE_DOMAIN } from '@/data/instagram';
 
 interface Props {
-  newsItem: OmniNewsItem;
+  newsItem?: OmniNewsItem;
+  postContent?: PostContent;
 }
 
-export const ReelsVideoStudio: React.FC<Props> = ({ newsItem }) => {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentWordIdx, setCurrentWordIdx] = useState(0);
-  const [selectedVoiceTone, setSelectedVoiceTone] = useState<'cinematic' | 'news' | 'raw'>('cinematic');
-  const [speechRate, setSpeechRate] = useState(1.0);
-  const [downloading, setDownloading] = useState(false);
-  const reelRef = useRef<HTMLDivElement | null>(null);
+export const ReelsVideoStudio: React.FC<Props> = ({ newsItem, postContent }) => {
+  const itemTitle = postContent?.headline || newsItem?.title || 'UNTITLED POST';
+  const itemCategory = postContent?.category || newsItem?.category || 'TECH';
+  const itemSummary = postContent?.body || newsItem?.summary || '';
+  const itemTakeaway = postContent?.rayuTakeaway || newsItem?.rayuTakeaway || itemSummary;
+  const bgImageUrl = postContent?.sourceImage || newsItem?.imageUrl || '';
 
-  // Script text for voiceover narration
-  const scriptText = `Breaking Awareness. ${newsItem.category} Update. ${newsItem.title}. ${newsItem.summary}. Rayu takeaway: ${newsItem.rayuTakeaway || newsItem.summary}`;
-  const scriptWords = scriptText.split(' ');
+  const [isPlaying, setIsPlaying] = useState(true);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordNotice, setRecordNotice] = useState<string | null>(null);
 
-  // Speech Synthesis setup
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const animFrameRef = useRef<number | null>(null);
+  const imageLoadedRef = useRef<HTMLImageElement | null>(null);
+
+  // Preload background image for canvas render loop
   useEffect(() => {
-    if (!isPlaying) return;
+    if (!bgImageUrl) return;
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.src = bgImageUrl;
+    img.onload = () => {
+      imageLoadedRef.current = img;
+    };
+  }, [bgImageUrl]);
 
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(scriptText);
-      utterance.rate = speechRate;
-      utterance.pitch = selectedVoiceTone === 'raw' ? 0.8 : selectedVoiceTone === 'news' ? 1.1 : 1.0;
+  // Programmatic Motion Animation Loop (1080x1920 9:16 Vertical Reel)
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
 
-      utterance.onboundary = (event) => {
-        if (event.name === 'word') {
-          const charIdx = event.charIndex;
-          const wordIdx = scriptText.substring(0, charIdx).trim().split(/\s+/).length - 1;
-          setCurrentWordIdx(Math.max(0, wordIdx));
+    let startTime = performance.now();
+
+    const renderFrame = (now: number) => {
+      const elapsed = (now - startTime) / 1000; // seconds
+      const cycleTime = elapsed % 8; // 8-second video loop
+
+      // Clear Canvas
+      ctx.fillStyle = '#050505';
+      ctx.fillRect(0, 0, 1080, 1920);
+
+      // 1. Ken Burns Slow Zoom & Pan Background Image
+      if (imageLoadedRef.current) {
+        ctx.save();
+        const zoom = 1 + (cycleTime / 8) * 0.15; // Smooth 15% zoom over 8s
+        const panY = (cycleTime / 8) * 40; // Slow 40px vertical drift
+
+        ctx.translate(540, 960);
+        ctx.scale(zoom, zoom);
+        ctx.translate(-540, -960 - panY);
+
+        // Draw cover-fitted background
+        ctx.globalAlpha = 0.35;
+        ctx.drawImage(imageLoadedRef.current, 0, 0, 1080, 1920);
+        ctx.restore();
+      }
+
+      // 2. Volumetric Glowing Cyber Gradient Overlay
+      const grad = ctx.createRadialGradient(540, 960, 100, 540, 960, 900);
+      grad.addColorStop(0, 'rgba(204, 255, 0, 0.08)');
+      grad.addColorStop(1, 'rgba(5, 5, 5, 0.95)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 1080, 1920);
+
+      // 3. Animated Glowing Scanline Line Sweep
+      const scanY = (cycleTime / 8) * 1920;
+      ctx.strokeStyle = 'rgba(204, 255, 0, 0.25)';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(0, scanY);
+      ctx.lineTo(1080, scanY);
+      ctx.stroke();
+
+      // 4. Header Branding
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = '900 48px monospace';
+      ctx.fillText('RAYU.', 90, 180);
+
+      ctx.fillStyle = '#CCFF00';
+      ctx.font = 'bold 24px monospace';
+      ctx.fillText(`[${itemCategory} • 9:16 MOTION REEL]`, 90, 230);
+
+      // 5. Headline Text Entrance Fade
+      const headlineAlpha = Math.min(1, Math.max(0, (cycleTime - 0.5) * 2));
+      ctx.save();
+      ctx.globalAlpha = headlineAlpha;
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = '900 58px sans-serif';
+
+      // Wrap headline lines
+      const words = itemTitle.toUpperCase().split(' ');
+      let line = '';
+      let y = 800;
+      for (let i = 0; i < words.length; i++) {
+        const testLine = line + words[i] + ' ';
+        if (ctx.measureText(testLine).width > 900 && i > 0) {
+          ctx.fillText(line, 90, y);
+          line = words[i] + ' ';
+          y += 75;
+        } else {
+          line = testLine;
         }
-      };
+      }
+      ctx.fillText(line, 90, y);
+      ctx.restore();
 
-      utterance.onend = () => {
-        setIsPlaying(false);
-        setCurrentWordIdx(0);
-      };
+      // 6. Body Text / Takeaway Entrance
+      const bodyAlpha = Math.min(1, Math.max(0, (cycleTime - 2.0) * 1.5));
+      ctx.save();
+      ctx.globalAlpha = bodyAlpha;
+      ctx.fillStyle = '#CCFF00';
+      ctx.font = 'bold 28px monospace';
+      ctx.fillText(`💡 INSIGHT:`, 90, y + 100);
 
-      window.speechSynthesis.speak(utterance);
-    } else {
-      // Fallback word simulation interval
-      const interval = setInterval(() => {
-        setCurrentWordIdx((prev) => {
-          if (prev >= scriptWords.length - 1) {
-            setIsPlaying(false);
-            return 0;
-          }
-          return prev + 1;
-        });
-      }, 300);
-      return () => clearInterval(interval);
-    }
-  }, [isPlaying, scriptText, speechRate, selectedVoiceTone, scriptWords.length]);
+      ctx.fillStyle = '#E5E5E5';
+      ctx.font = '500 32px monospace';
+      const takeawayText = itemTakeaway.slice(0, 160);
+      ctx.fillText(takeawayText.slice(0, Math.floor((cycleTime - 2.0) * 45)), 90, y + 150);
+      ctx.restore();
 
-  const togglePlayback = () => {
+      // 7. Footer Handle
+      ctx.fillStyle = '#CCFF00';
+      ctx.font = 'bold 26px monospace';
+      ctx.fillText(`@${INSTAGRAM_HANDLE} • ${WEBSITE_DOMAIN}`, 90, 1780);
+
+      if (isPlaying) {
+        animFrameRef.current = requestAnimationFrame(renderFrame);
+      }
+    };
+
     if (isPlaying) {
-      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
-      setIsPlaying(false);
-    } else {
-      setCurrentWordIdx(0);
-      setIsPlaying(true);
+      animFrameRef.current = requestAnimationFrame(renderFrame);
     }
-  };
 
-  const handleDownloadReelFrame = async () => {
-    if (!reelRef.current) return;
-    setDownloading(true);
+    return () => {
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+    };
+  }, [isPlaying, itemTitle, itemCategory, itemTakeaway]);
+
+  // Programmatic Video Recording via MediaRecorder
+  const handleRecordVideoClip = async () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    setIsRecording(true);
+    setRecordNotice('📹 RECORDING 8-SECOND MOTION REEL VIDEO MP4/WEBM...');
+
     try {
-      const dataUrl = await toPng(reelRef.current, { quality: 1.0, pixelRatio: 3, cacheBust: true });
-      const link = document.createElement('a');
-      link.download = `rayu-reel-frame-${newsItem.id}.png`;
-      link.href = dataUrl;
-      link.click();
-    } catch (err) {
-      console.error('Reel frame export failed:', err);
-    } finally {
-      setDownloading(false);
+      const stream = canvas.captureStream(30); // 30 FPS
+      const recorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9' });
+      const chunks: Blob[] = [];
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunks.push(e.data);
+      };
+
+      recorder.onstop = () => {
+        const blob = new Blob(chunks, { type: 'video/webm' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.download = `rayu-motion-reel-${Date.now()}.webm`;
+        a.href = url;
+        a.click();
+        URL.revokeObjectURL(url);
+        setIsRecording(false);
+        setRecordNotice('✅ MOTION REEL VIDEO EXPORT COMPLETE!');
+        setTimeout(() => setRecordNotice(null), 3000);
+      };
+
+      recorder.start();
+      setTimeout(() => recorder.stop(), 8000); // Record 8s clip
+    } catch (err: any) {
+      console.error('Video recording failed:', err);
+      setIsRecording(false);
+      setRecordNotice(`❌ Video recording error: ${err.message}`);
     }
   };
 
   return (
-    <div className="bg-[#050505] border border-white/10 p-6 rounded-sm text-white">
-      {/* Voiceover & Speech Control Bar */}
-      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 mb-8 p-4 bg-[#090909] border border-white/10 rounded-sm">
+    <div className="bg-[#050505] border border-white/10 p-5 sm:p-7 rounded-sm text-white space-y-6">
+      {/* Top Controls */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 p-4 bg-[#090909] border border-[#CCFF00]/30 rounded-sm shadow-[0_0_15px_rgba(204,255,0,0.1)]">
         <div className="flex items-center gap-3">
           <button
-            onClick={togglePlayback}
-            className="w-12 h-12 rounded-full bg-[#CCFF00] text-black flex items-center justify-center hover:scale-105 transition-transform shadow-[0_0_20px_rgba(204,255,0,0.4)] shrink-0 cursor-pointer"
+            onClick={() => setIsPlaying(!isPlaying)}
+            className="w-10 h-10 rounded-full bg-[#CCFF00] text-black flex items-center justify-center hover:scale-105 transition-transform shadow-[0_0_15px_rgba(204,255,0,0.4)] shrink-0 cursor-pointer"
           >
-            {isPlaying ? <Pause size={20} className="fill-black" /> : <Play size={20} className="fill-black ml-1" />}
+            {isPlaying ? <Pause size={18} className="fill-black" /> : <Play size={18} className="fill-black ml-0.5" />}
           </button>
-
           <div>
-            <div className="flex items-center gap-2 text-xs font-mono font-bold text-[#CCFF00] uppercase">
-              <Volume2 size={14} />
-              <span>AI VOICEOVER SYNTHESIS ENTIRELY SYNCED</span>
+            <div className="flex items-center gap-2 text-xs font-mono font-bold text-[#CCFF00] uppercase mb-0.5">
+              <Film size={14} />
+              <span>REMOTION PROGRAMMATIC MOTION VIDEO ENGINE (9:16 REEL)</span>
             </div>
             <span className="text-xs font-mono text-neutral-400">
-              {isPlaying ? 'PLAYING VOICE & ANIMATED CAPTIONS...' : 'CLICK PLAY TO START VOICEOVER NARRATION'}
+              KEN BURNS ZOOM + TEXT ENTRANCE + SCANLINE PULSE (8S CLIP)
             </span>
           </div>
         </div>
 
-        {/* Voice Tones & Speed */}
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center bg-black border border-white/15 rounded p-1 text-[11px] font-mono">
-            <button
-              onClick={() => setSelectedVoiceTone('cinematic')}
-              className={`px-2.5 py-1 rounded uppercase ${selectedVoiceTone === 'cinematic' ? 'bg-[#CCFF00] text-black font-bold' : 'text-neutral-400'}`}
-            >
-              CINEMATIC AI
-            </button>
-            <button
-              onClick={() => setSelectedVoiceTone('news')}
-              className={`px-2.5 py-1 rounded uppercase ${selectedVoiceTone === 'news' ? 'bg-[#CCFF00] text-black font-bold' : 'text-neutral-400'}`}
-            >
-              NEWSROOM HOST
-            </button>
-            <button
-              onClick={() => setSelectedVoiceTone('raw')}
-              className={`px-2.5 py-1 rounded uppercase ${selectedVoiceTone === 'raw' ? 'bg-[#CCFF00] text-black font-bold' : 'text-neutral-400'}`}
-            >
-              RAW UNFILTERED
-            </button>
-          </div>
-
-          <button
-            onClick={handleDownloadReelFrame}
-            disabled={downloading}
-            className="inline-flex items-center gap-2 text-xs font-mono font-bold bg-[#0B0B0B] border border-white/20 text-[#CCFF00] hover:border-[#CCFF00] px-4 py-2 rounded transition-colors uppercase cursor-pointer"
-          >
-            <Download size={14} />
-            <span>{downloading ? 'EXPORTING...' : 'DOWNLOAD 9:16 FRAME'}</span>
-          </button>
-        </div>
+        <button
+          onClick={handleRecordVideoClip}
+          disabled={isRecording}
+          className="px-5 py-2.5 bg-[#CCFF00] text-black hover:bg-[#b5e600] font-mono text-xs font-bold uppercase rounded-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(204,255,0,0.3)] disabled:opacity-50"
+        >
+          <Video size={14} />
+          <span>{isRecording ? 'RECORDING VIDEO...' : 'EXPORT MOTION REEL (MP4/WEBM) 🚀'}</span>
+        </button>
       </div>
 
-      {/* 9:16 Vertical Video Studio Canvas Preview */}
+      {recordNotice && (
+        <div className="p-3 bg-[#CCFF00]/10 border border-[#CCFF00]/40 rounded text-xs font-mono text-[#CCFF00] flex items-center gap-2">
+          <Sparkles size={14} />
+          <span>{recordNotice}</span>
+        </div>
+      )}
+
+      {/* 9:16 Vertical Canvas Preview */}
       <div className="flex flex-col items-center">
-        <span className="text-xs font-mono font-bold text-neutral-400 uppercase mb-4 block">
-          🎬 9:16 INSTAGRAM REELS / SHORTS / TIKTOK VIDEO CANVAS (1080x1920 RATIO)
-        </span>
-
-        <div
-          ref={reelRef}
-          className="relative w-full max-w-[340px] aspect-[9/16] bg-black border border-white/20 rounded-md overflow-hidden p-6 flex flex-col justify-between shadow-2xl"
-        >
-          {/* Background Cover Image with Motion Overlay */}
-          {newsItem.imageUrl && (
-            <img
-              src={newsItem.imageUrl}
-              alt={newsItem.title}
-              className={`absolute inset-0 w-full h-full object-cover opacity-35 transition-transform duration-10000 ${isPlaying ? 'scale-125' : 'scale-100'}`}
-            />
-          )}
-
-          {/* Top Reel Header Overlay */}
-          <div className="relative z-10 flex items-center justify-between border-b border-white/20 pb-3">
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping" />
-              <span className="text-xs font-mono font-black text-white uppercase tracking-widest">RAYU REELS</span>
-            </div>
-            <span className="text-[10px] font-mono font-bold px-2 py-0.5 bg-[#CCFF00] text-black rounded uppercase">
-              [{newsItem.category}]
-            </span>
-          </div>
-
-          {/* Center Dynamic Word-by-Word Kinetic Caption Container */}
-          <div className="relative z-10 my-auto text-center py-6 px-2 bg-black/60 border border-white/10 rounded-md backdrop-blur-md">
-            <span className="text-[10px] font-mono text-[#CCFF00] uppercase block mb-3 font-bold">
-              ⚡ LIVE SPEECH SYNTHESIS NARRATION
-            </span>
-
-            <h3 className="text-lg font-black text-white leading-tight uppercase mb-4">
-              {newsItem.title}
-            </h3>
-
-            {/* Kinetic Caption Highlighting Box */}
-            <div className="p-3 bg-black/80 border border-[#CCFF00]/40 rounded text-sm font-black uppercase text-white min-h-[60px] flex items-center justify-center leading-snug">
-              <span>
-                {scriptWords.map((word, idx) => {
-                  const isHighlighted = idx === currentWordIdx && isPlaying;
-                  return (
-                    <span
-                      key={idx}
-                      className={`inline-block mx-0.5 px-1 rounded transition-colors ${
-                        isHighlighted ? 'bg-[#CCFF00] text-black scale-110 shadow-[0_0_10px_rgba(204,255,0,0.8)]' : 'text-neutral-200'
-                      }`}
-                    >
-                      {word}{' '}
-                    </span>
-                  );
-                })}
-              </span>
-            </div>
-          </div>
-
-          {/* Bottom Waveform Visualizer & Branding Footer */}
-          <div className="relative z-10 pt-3 border-t border-white/20">
-            {/* Audio Waveform Simulator */}
-            <div className="flex items-center justify-center gap-1 mb-3 h-5">
-              {[40, 70, 30, 90, 60, 100, 45, 80, 50, 95, 65, 35].map((h, i) => (
-                <span
-                  key={i}
-                  style={{ height: isPlaying ? `${Math.max(15, Math.round(h * Math.random()))}%` : '20%' }}
-                  className="w-1 bg-[#CCFF00] rounded-full transition-all duration-150"
-                />
-              ))}
-            </div>
-
-            <div className="flex items-center justify-between text-[10px] font-mono font-bold text-neutral-300">
-              <span className="text-[#CCFF00]">@{INSTAGRAM_HANDLE}</span>
-              <span>RAYU-360.VERCEL.APP</span>
-            </div>
-          </div>
+        <div className="relative aspect-[9/16] w-full max-w-[340px] bg-[#050505] border border-white/20 rounded-sm overflow-hidden shadow-2xl">
+          <canvas
+            ref={canvasRef}
+            width={1080}
+            height={1920}
+            className="w-full h-full object-contain"
+          />
         </div>
       </div>
     </div>

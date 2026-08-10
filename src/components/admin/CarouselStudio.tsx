@@ -1,219 +1,287 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { Download, Sparkles, ChevronRight, ChevronLeft, Check, Layers, Quote, ArrowRight } from 'lucide-react';
+import { Download, Sparkles, Layers, ArrowRight, Plus, Trash2, Edit3, Check } from 'lucide-react';
 import { OmniNewsItem } from '@/services/newsFetcher';
-import { INSTAGRAM_HANDLE } from '@/data/instagram';
+import { PostContent } from '@/types/postContent';
+import { INSTAGRAM_HANDLE, WEBSITE_DOMAIN } from '@/data/instagram';
 import { toPng } from 'html-to-image';
 
 interface Props {
-  newsItem: OmniNewsItem;
+  newsItem?: OmniNewsItem;
+  postContent?: PostContent;
 }
 
-export const CarouselStudio: React.FC<Props> = ({ newsItem }) => {
-  const [activeSlide, setActiveSlide] = useState<number>(1);
-  const [downloading, setDownloading] = useState(false);
+interface SlideItem {
+  id: number;
+  slideType: 'COVER' | 'CONTENT' | 'CTA';
+  headline: string;
+  bodyText: string;
+}
+
+export const CarouselStudio: React.FC<Props> = ({ newsItem, postContent }) => {
+  const itemTitle = postContent?.headline || newsItem?.title || 'UNTITLED POST';
+  const itemCategory = postContent?.category || newsItem?.category || 'TECH';
+  const itemSummary = postContent?.body || newsItem?.summary || '';
+  const itemTakeaway = postContent?.rayuTakeaway || newsItem?.rayuTakeaway || itemSummary;
+  const bgImage = postContent?.sourceImage || newsItem?.imageUrl || '';
+
+  // Auto-split text into 4 logical slides
+  const autoSlides: SlideItem[] = [
+    {
+      id: 1,
+      slideType: 'COVER',
+      headline: itemTitle,
+      bodyText: itemTakeaway || 'SWIPE TO READ FULL BREAKDOWN →',
+    },
+    {
+      id: 2,
+      slideType: 'CONTENT',
+      headline: '01 // THE CORE SHIFT',
+      bodyText: itemSummary.slice(0, 180) || itemTitle,
+    },
+    {
+      id: 3,
+      slideType: 'CONTENT',
+      headline: '02 // THE UNFILTERED TAKE',
+      bodyText: itemTakeaway || itemSummary,
+    },
+    {
+      id: 4,
+      slideType: 'CTA',
+      headline: 'FULL THOUGHTS & SOURCES LIVE AT RAYU',
+      bodyText: `Follow @${INSTAGRAM_HANDLE} for daily tech takes, reflections, and macro shifts.\nLink in bio 👉 ${WEBSITE_DOMAIN}`,
+    },
+  ];
+
+  const [slides, setSlides] = useState<SlideItem[]>(autoSlides);
+  const [activeSlideIndex, setActiveSlideIndex] = useState<number>(0);
+  const [isExporting, setIsExporting] = useState(false);
   const slideRef = useRef<HTMLDivElement | null>(null);
+
+  const activeSlide = slides[activeSlideIndex] || slides[0];
+
+  const updateActiveSlideHeadline = (text: string) => {
+    setSlides((prev) =>
+      prev.map((s, idx) => (idx === activeSlideIndex ? { ...s, headline: text } : s))
+    );
+  };
+
+  const updateActiveSlideBody = (text: string) => {
+    setSlides((prev) =>
+      prev.map((s, idx) => (idx === activeSlideIndex ? { ...s, bodyText: text } : s))
+    );
+  };
+
+  const handleAddSlide = () => {
+    if (slides.length >= 7) return;
+    const newSlide: SlideItem = {
+      id: Date.now(),
+      slideType: 'CONTENT',
+      headline: `0${slides.length} // KEY POINT`,
+      bodyText: 'Enter supporting thoughts or key takeaway for this slide...',
+    };
+    setSlides((prev) => [...prev, newSlide]);
+    setActiveSlideIndex(slides.length);
+  };
+
+  const handleRemoveSlide = (index: number) => {
+    if (slides.length <= 2) return;
+    setSlides((prev) => prev.filter((_, idx) => idx !== index));
+    if (activeSlideIndex >= slides.length - 1) {
+      setActiveSlideIndex(Math.max(0, slides.length - 2));
+    }
+  };
 
   const handleDownloadSingleSlide = async () => {
     if (!slideRef.current) return;
-    setDownloading(true);
+    setIsExporting(true);
     try {
       const dataUrl = await toPng(slideRef.current, { quality: 1.0, pixelRatio: 3, cacheBust: true });
       const link = document.createElement('a');
-      link.download = `rayu-carousel-slide-${activeSlide}-${newsItem.id}.png`;
+      link.download = `rayu-carousel-slide-${activeSlideIndex + 1}.png`;
       link.href = dataUrl;
       link.click();
     } catch (err) {
-      console.error('Slide export failed:', err);
+      console.error('Slide export error:', err);
     } finally {
-      setDownloading(false);
+      setIsExporting(false);
+    }
+  };
+
+  const handleExportAllSlides = async () => {
+    if (!slideRef.current) return;
+    setIsExporting(true);
+    try {
+      for (let i = 0; i < slides.length; i++) {
+        setActiveSlideIndex(i);
+        // Wait for slide to re-render in DOM
+        await new Promise((r) => setTimeout(r, 400));
+        const dataUrl = await toPng(slideRef.current, { quality: 1.0, pixelRatio: 3, cacheBust: true });
+        const link = document.createElement('a');
+        link.download = `rayu-carousel-slide-${i + 1}-of-${slides.length}.png`;
+        link.href = dataUrl;
+        link.click();
+        await new Promise((r) => setTimeout(r, 200));
+      }
+    } catch (err) {
+      console.error('Batch export error:', err);
+    } finally {
+      setIsExporting(false);
     }
   };
 
   return (
-    <div className="bg-[#050505] border border-white/10 p-6 rounded-sm text-white">
-      {/* Slide Navigation Tabs (1 to 5) */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 mb-8 p-4 bg-[#090909] border border-white/10 rounded-sm">
+    <div className="bg-[#050505] border border-white/10 p-5 sm:p-7 rounded-sm text-white space-y-6">
+      {/* Slide Navigation Header Bar */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 p-4 bg-[#090909] border border-[#CCFF00]/30 rounded-sm shadow-[0_0_15px_rgba(204,255,0,0.1)]">
         <div>
           <div className="flex items-center gap-2 text-xs font-mono font-bold text-[#CCFF00] uppercase mb-1">
-            <Layers size={14} />
-            <span>1080x1080 5-SLIDE INSTAGRAM CAROUSEL DECK</span>
+            <Layers size={15} />
+            <span>MULTI-SLIDE CAROUSEL GENERATOR ({slides.length} SLIDES)</span>
           </div>
           <span className="text-xs font-mono text-neutral-400">
-            SLIDE {activeSlide} OF 5 SELECTED FOR EXPORT
+            SLIDE {activeSlideIndex + 1} OF {slides.length} ACTIVE
           </span>
         </div>
 
-        <div className="flex items-center gap-2">
-          {[1, 2, 3, 4, 5].map((num) => (
+        <div className="flex flex-wrap items-center gap-2">
+          {slides.map((_, idx) => (
             <button
-              key={num}
-              onClick={() => setActiveSlide(num)}
-              className={`px-3 py-2 rounded font-mono text-xs font-bold transition-all cursor-pointer ${
-                activeSlide === num
+              key={idx}
+              onClick={() => setActiveSlideIndex(idx)}
+              className={`px-3 py-1.5 rounded font-mono text-xs font-bold transition-all cursor-pointer ${
+                activeSlideIndex === idx
                   ? 'bg-[#CCFF00] text-black border border-[#CCFF00] shadow-[0_0_10px_rgba(204,255,0,0.3)]'
                   : 'bg-black border border-white/15 text-neutral-300 hover:text-white'
               }`}
             >
-              SLIDE 0{num}
+              0{idx + 1}
             </button>
           ))}
 
-          <button
-            onClick={handleDownloadSingleSlide}
-            disabled={downloading}
-            className="ml-2 inline-flex items-center gap-2 text-xs font-mono font-bold bg-[#0B0B0B] border border-white/20 text-[#CCFF00] hover:border-[#CCFF00] px-4 py-2 rounded transition-colors uppercase cursor-pointer"
-          >
-            <Download size={14} />
-            <span>{downloading ? 'EXPORTING...' : `EXPORT SLIDE 0${activeSlide}`}</span>
-          </button>
+          {slides.length < 7 && (
+            <button
+              onClick={handleAddSlide}
+              className="px-2.5 py-1.5 bg-white/10 hover:bg-white/20 border border-white/20 rounded font-mono text-xs text-white uppercase flex items-center gap-1 cursor-pointer"
+            >
+              <Plus size={13} />
+              <span>ADD SLIDE</span>
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Slide Preview Canvas Container */}
-      <div className="flex flex-col items-center">
-        <div
-          ref={slideRef}
-          className="relative aspect-square w-full max-w-[480px] bg-[#050505] border border-white/20 rounded-sm p-8 flex flex-col justify-between overflow-hidden shadow-2xl"
-        >
-          {/* Background Image Layer */}
-          {newsItem.imageUrl && (
-            <img
-              src={newsItem.imageUrl}
-              alt={newsItem.title}
-              className="absolute inset-0 w-full h-full object-cover opacity-20 pointer-events-none"
+      {/* Main Studio Grid: Left Canvas Preview, Right Slide Editor */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        {/* Left Slide Canvas Preview */}
+        <div className="lg:col-span-6 flex flex-col items-center">
+          <div
+            ref={slideRef}
+            className="relative aspect-[4/5] w-full max-w-[440px] bg-[#050505] border border-white/20 rounded-sm p-7 flex flex-col justify-between overflow-hidden shadow-2xl"
+          >
+            {/* Background Image Layer */}
+            {bgImage && (
+              <img
+                src={bgImage}
+                alt="Background"
+                className="absolute inset-0 w-full h-full object-cover opacity-25 pointer-events-none"
+              />
+            )}
+
+            {/* Header branding */}
+            <div className="relative z-10 flex items-center justify-between border-b border-white/20 pb-3">
+              <div className="text-2xl font-black text-white tracking-tight">
+                RAY<span className="text-[#CCFF00]">U.</span>
+              </div>
+              <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 bg-[#CCFF00] text-black rounded uppercase">
+                [{itemCategory} • SLIDE 0{activeSlideIndex + 1}/0{slides.length}]
+              </span>
+            </div>
+
+            {/* Slide Body */}
+            <div className="relative z-10 my-auto py-4 space-y-4">
+              <h2 className="text-xl sm:text-2xl font-black uppercase tracking-tight leading-snug text-white">
+                {activeSlide.headline}
+              </h2>
+              <p className="text-xs font-mono text-neutral-200 leading-relaxed whitespace-pre-line">
+                {activeSlide.bodyText}
+              </p>
+            </div>
+
+            {/* Footer */}
+            <div className="relative z-10 flex items-center justify-between pt-3 border-t border-white/15 text-[10px] font-mono text-neutral-400">
+              <span className="text-[#CCFF00] font-bold">@{INSTAGRAM_HANDLE}</span>
+              <span className="flex items-center gap-1">
+                <span>SWIPE</span>
+                <ArrowRight size={10} className="text-[#CCFF00]" />
+              </span>
+            </div>
+          </div>
+
+          <div className="mt-4 flex items-center gap-3 w-full max-w-[440px]">
+            <button
+              onClick={handleDownloadSingleSlide}
+              disabled={isExporting}
+              className="flex-1 py-2.5 bg-white/10 border border-white/20 hover:border-[#CCFF00] text-white text-xs font-mono font-bold uppercase rounded-sm flex items-center justify-center gap-2 cursor-pointer transition-colors"
+            >
+              <Download size={14} />
+              <span>EXPORT SLIDE 0{activeSlideIndex + 1} PNG</span>
+            </button>
+
+            <button
+              onClick={handleExportAllSlides}
+              disabled={isExporting}
+              className="flex-1 py-2.5 bg-[#CCFF00] text-black hover:bg-[#b5e600] text-xs font-mono font-bold uppercase rounded-sm flex items-center justify-center gap-2 cursor-pointer transition-colors shadow-[0_0_15px_rgba(204,255,0,0.3)]"
+            >
+              <Download size={14} />
+              <span>{isExporting ? 'EXPORTING...' : `EXPORT ALL ${slides.length} SLIDES 🚀`}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Right Manual Slide Editor */}
+        <div className="lg:col-span-6 bg-[#090909] border border-white/15 p-5 rounded-sm space-y-4">
+          <div className="flex items-center justify-between border-b border-white/10 pb-3">
+            <span className="text-xs font-mono font-bold text-[#CCFF00] uppercase flex items-center gap-1.5">
+              <Edit3 size={14} />
+              <span>EDIT SLIDE 0{activeSlideIndex + 1} TEXT CONTENT:</span>
+            </span>
+
+            {slides.length > 2 && (
+              <button
+                onClick={() => handleRemoveSlide(activeSlideIndex)}
+                className="text-xs font-mono text-red-400 hover:text-red-300 flex items-center gap-1 cursor-pointer uppercase"
+              >
+                <Trash2 size={13} />
+                <span>DELETE SLIDE</span>
+              </button>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-mono font-bold text-neutral-400 uppercase mb-1">
+              SLIDE HEADLINE:
+            </label>
+            <input
+              type="text"
+              value={activeSlide.headline}
+              onChange={(e) => updateActiveSlideHeadline(e.target.value)}
+              className="w-full bg-[#050505] border border-white/20 focus:border-[#CCFF00] px-3 py-2 text-xs font-bold text-white rounded-sm outline-none font-mono uppercase"
             />
-          )}
+          </div>
 
-          {/* SLIDE 1: COVER HEADLINE */}
-          {activeSlide === 1 && (
-            <>
-              <div className="relative z-10 flex items-center justify-between border-b border-white/20 pb-4">
-                <div className="text-3xl font-black text-white">RAY<span className="text-[#CCFF00]">U.</span></div>
-                <span className="text-xs font-mono font-bold px-3 py-1 bg-[#CCFF00] text-black rounded uppercase">
-                  [{newsItem.category} • SLIDE 01/05]
-                </span>
-              </div>
-              <div className="relative z-10 my-auto py-6">
-                <span className="text-xs font-mono text-[#CCFF00] uppercase block mb-3 font-bold">
-                  ● CAROUSEL COVER STORY • {newsItem.region}
-                </span>
-                <h3 className="text-2xl sm:text-3xl font-black text-white leading-tight uppercase mb-4">
-                  {newsItem.title}
-                </h3>
-                <p className="text-sm text-neutral-300 leading-relaxed line-clamp-4">
-                  {newsItem.summary}
-                </p>
-              </div>
-              <div className="relative z-10 pt-4 border-t border-white/20 flex items-center justify-between text-xs font-mono text-neutral-400">
-                <span className="text-[#CCFF00] font-bold">SWIPE RIGHT FOR FACTS 👉</span>
-                <span>@THISISRAYU</span>
-              </div>
-            </>
-          )}
-
-          {/* SLIDE 2: KEY FACTS PART 1 */}
-          {activeSlide === 2 && (
-            <>
-              <div className="relative z-10 flex items-center justify-between border-b border-white/20 pb-4">
-                <span className="text-xs font-mono font-bold text-[#CCFF00] uppercase">KEY FACTS ANALYSIS</span>
-                <span className="text-xs font-mono text-neutral-400">SLIDE 02/05</span>
-              </div>
-              <div className="relative z-10 my-auto py-4 space-y-4">
-                <h4 className="text-lg font-bold text-white uppercase border-l-2 border-[#CCFF00] pl-3">
-                  PRIMARY FACT BREAKDOWN
-                </h4>
-                {newsItem.keyFacts && newsItem.keyFacts.length > 0 ? (
-                  <div className="space-y-3">
-                    {newsItem.keyFacts.slice(0, 2).map((fact, i) => (
-                      <div key={i} className="p-4 bg-neutral-900/80 border border-white/10 rounded text-xs font-mono text-neutral-200">
-                        <span className="text-[#CCFF00] font-bold block mb-1">FACT 0{i + 1}</span>
-                        {fact}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-xs font-mono text-neutral-300">{newsItem.summary}</p>
-                )}
-              </div>
-              <div className="relative z-10 pt-4 border-t border-white/20 flex items-center justify-between text-xs font-mono text-neutral-400">
-                <span>CONTINUE SWIPING 👉</span>
-                <span>@THISISRAYU</span>
-              </div>
-            </>
-          )}
-
-          {/* SLIDE 3: KEY FACTS PART 2 & CONTEXT */}
-          {activeSlide === 3 && (
-            <>
-              <div className="relative z-10 flex items-center justify-between border-b border-white/20 pb-4">
-                <span className="text-xs font-mono font-bold text-[#CCFF00] uppercase">CONTEXT & DEEP DIVE</span>
-                <span className="text-xs font-mono text-neutral-400">SLIDE 03/05</span>
-              </div>
-              <div className="relative z-10 my-auto py-4 space-y-4">
-                <div className="p-4 bg-neutral-900/80 border border-white/10 rounded text-xs font-mono text-neutral-200">
-                  <span className="text-[#CCFF00] font-bold block mb-1">FACT 03</span>
-                  {newsItem.keyFacts && newsItem.keyFacts[2] ? newsItem.keyFacts[2] : newsItem.summary}
-                </div>
-                <div className="p-4 bg-[#CCFF00]/10 border border-[#CCFF00]/30 rounded text-xs font-mono text-white">
-                  <span className="text-[#CCFF00] font-bold block mb-1">STRATEGIC IMPACT</span>
-                  Reported by {newsItem.source} in {newsItem.region} region. Published {newsItem.publishedAt}.
-                </div>
-              </div>
-              <div className="relative z-10 pt-4 border-t border-white/20 flex items-center justify-between text-xs font-mono text-neutral-400">
-                <span>SWIPE FOR UNFILTERED TAKE 👉</span>
-                <span>@THISISRAYU</span>
-              </div>
-            </>
-          )}
-
-          {/* SLIDE 4: UNFILTERED TAKEAWAY */}
-          {activeSlide === 4 && (
-            <>
-              <div className="relative z-10 flex items-center justify-between border-b border-white/20 pb-4">
-                <span className="text-xs font-mono font-bold text-[#CCFF00] uppercase">RAYU'S UNFILTERED TAKE</span>
-                <span className="text-xs font-mono text-neutral-400">SLIDE 04/05</span>
-              </div>
-              <div className="relative z-10 my-auto py-6 text-center">
-                <Quote size={36} className="text-[#CCFF00] mx-auto mb-4 opacity-70" />
-                <p className="text-lg sm:text-xl font-bold text-white leading-relaxed italic mb-4">
-                  "{newsItem.rayuTakeaway || newsItem.summary}"
-                </p>
-                <span className="text-xs font-mono text-neutral-400 uppercase tracking-widest">— RAYU EDITORIAL</span>
-              </div>
-              <div className="relative z-10 pt-4 border-t border-white/20 flex items-center justify-between text-xs font-mono text-neutral-400">
-                <span>FINAL SLIDE 👉</span>
-                <span>@THISISRAYU</span>
-              </div>
-            </>
-          )}
-
-          {/* SLIDE 5: OUTRO & CALL TO ACTION */}
-          {activeSlide === 5 && (
-            <>
-              <div className="relative z-10 flex items-center justify-between border-b border-white/20 pb-4">
-                <div className="text-3xl font-black text-white">RAY<span className="text-[#CCFF00]">U.</span></div>
-                <span className="text-xs font-mono text-neutral-400">SLIDE 05/05</span>
-              </div>
-              <div className="relative z-10 my-auto text-center py-6">
-                <h3 className="text-2xl font-black text-white uppercase mb-4">
-                  THINKING AS IT HAPPENS.
-                </h3>
-                <p className="text-xs font-mono text-neutral-300 mb-6 max-w-xs mx-auto leading-relaxed">
-                  Join the independent unfiltered stream on tech, world shifts, life, and sovereign ideas.
-                </p>
-                <div className="inline-flex items-center gap-2 px-6 py-3 bg-[#CCFF00] text-black font-black text-xs font-mono uppercase rounded shadow-[0_0_20px_rgba(204,255,0,0.4)]">
-                  <span>FOLLOW @THISISRAYU</span>
-                  <ArrowRight size={14} />
-                </div>
-              </div>
-              <div className="relative z-10 pt-4 border-t border-white/20 flex items-center justify-between text-xs font-mono text-neutral-400">
-                <span className="text-[#CCFF00]">RAYU-360.VERCEL.APP</span>
-                <span>INSTAGRAM FEED</span>
-              </div>
-            </>
-          )}
+          <div>
+            <label className="block text-[10px] font-mono font-bold text-neutral-400 uppercase mb-1">
+              SLIDE BODY TEXT:
+            </label>
+            <textarea
+              rows={5}
+              value={activeSlide.bodyText}
+              onChange={(e) => updateActiveSlideBody(e.target.value)}
+              className="w-full bg-[#050505] border border-white/20 focus:border-[#CCFF00] px-3 py-2.5 text-xs text-neutral-200 rounded-sm outline-none font-mono resize-y"
+            />
+          </div>
         </div>
       </div>
     </div>
