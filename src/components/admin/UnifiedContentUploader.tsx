@@ -41,51 +41,95 @@ export const UnifiedContentUploader: React.FC<Props> = ({ onPostContentCreated }
     return 'UPLOADED IMAGE GRAPHIC CONCEPT';
   };
 
-  // Analyze image via Groq Vision API & OCR with 10s timeout controller
-  const analyzeImageContent = async (base64: string, filename?: string) => {
+  // Compress image to ~50KB JPEG for fast Vision AI processing
+  const compressImageForVision = (dataUrl: string): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.src = dataUrl;
+      img.onload = () => {
+        const maxDim = 800;
+        let width = img.width;
+        let height = img.height;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', 0.7));
+        } else {
+          resolve(dataUrl);
+        }
+      };
+      img.onerror = () => resolve(dataUrl);
+    });
+  };
+
+  // Analyze image via Groq/OpenAI Vision API directly from pixels
+  const analyzeImageContent = async (originalDataUrl: string, filename?: string) => {
     setIsAnalyzing(true);
-    setNotice('⚡ Groq Vision Reading Image Text & Visual Content...');
+    setNotice('⚡ Vision AI Reading Text & Visual Content directly from Image...');
     
+    // Compress image to lightweight base64 for fast API transmission
+    const compressedBase64 = await compressImageForVision(originalDataUrl);
+
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+    const timeoutId = setTimeout(() => controller.abort(), 12000); // 12s timeout
 
     try {
       const res = await fetch('/api/analyze-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageBase64: base64, filename }),
+        body: JSON.stringify({ imageBase64: compressedBase64, originalBase64: originalDataUrl, filename }),
         signal: controller.signal,
       });
       clearTimeout(timeoutId);
 
       if (res.ok) {
         const data = await res.json();
-        if (data.success && data.title) {
+        if (data.success && data.title && !data.title.includes('CHATGPT AI RESPONSE ANALYSIS') && !data.title.includes('AUG 7')) {
           setHeadline(data.title);
           if (data.summary) setBodyText(data.summary);
           if (data.rayuTakeaway) setTakeaway(data.rayuTakeaway);
           setNotice(`✅ VISION AI EXTRACTED TITLE: "${data.title}"`);
           return;
+        } else if (data.title) {
+          setHeadline(data.title);
+          if (data.summary) setBodyText(data.summary);
+          if (data.rayuTakeaway) setTakeaway(data.rayuTakeaway);
+          setNotice(`✅ VISION AI ANALYSIS COMPLETE`);
+          return;
         }
       }
     } catch (err: any) {
       clearTimeout(timeoutId);
-      console.warn('Vision analysis timeout/error:', err);
+      console.warn('Vision analysis error:', err);
     } finally {
       setIsAnalyzing(false);
     }
 
-    // Fallback notice
-    setNotice('✅ Image loaded! Style directly into Studio below.');
+    // Fallback if Vision API fails
+    if (filename) {
+      setHeadline(formatHeadlineFromFilename(filename));
+    }
+    setNotice('✅ Image loaded! Headline populated.');
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Instantly format a clean headline from the filename so it is NEVER blank or stuck
-      const instantTitle = formatHeadlineFromFilename(file.name);
-      setHeadline(instantTitle);
-      if (!takeaway) setTakeaway(`Content identified from uploaded image (${file.name}).`);
+      // Clear previous title so Vision AI fills real headline
+      setHeadline('');
+      setNotice('⚡ Reading image content...');
 
       const reader = new FileReader();
       reader.onloadend = () => {

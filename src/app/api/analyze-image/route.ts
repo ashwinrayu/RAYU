@@ -7,10 +7,9 @@ export const maxDuration = 60;
 /**
  * RAYU Image Content Analyzer API Route
  *
- * Primary: Uses Groq Llama 3.2 Vision (llama-3.2-11b-vision-preview) for blazing fast, 
- * accurate visual text & image content extraction directly from image pixels.
- *
- * Fallback: Tesseract.js OCR + Groq Llama 3.3 70b.
+ * 1. Groq Llama 3.2 Vision (llama-3.2-11b-vision-preview) directly on compressed image.
+ * 2. OpenAI GPT-4o-mini Vision (gpt-4o-mini) directly on compressed image.
+ * 3. Tesseract.js OCR + Groq Llama 3.3 70b fallback.
  */
 
 async function analyzeImageWithGroqVision(
@@ -86,6 +85,71 @@ Output ONLY raw JSON. No markdown formatting wrappers.`,
   return null;
 }
 
+async function analyzeImageWithOpenAiVision(
+  imageBase64: string,
+  openAiKey: string
+): Promise<{ title: string; category: string; summary: string; rayuTakeaway: string } | null> {
+  try {
+    console.log('[RAYU Image Analyzer] Sending image to OpenAI gpt-4o-mini Vision API...');
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${openAiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: `You are an AI editor for RAYU magazine. Read all visible text and visual concepts in this image (screenshot, product bottle, article, graphic, chat).
+Synthesize structured JSON:
+{
+  "title": "Clear, punchy, UPPERCASE headline summarizing the main subject/product/text shown (under 10 words)",
+  "category": "TECH",
+  "summary": "1-2 sentence news summary describing what is shown in this image",
+  "rayuTakeaway": "1 short punchy editorial insight"
+}
+Output ONLY raw JSON. No markdown formatting wrappers.`,
+              },
+              {
+                type: 'image_url',
+                image_url: { url: imageBase64 },
+              },
+            ],
+          },
+        ],
+        max_tokens: 350,
+        temperature: 0.2,
+      }),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      const rawContent = data.choices?.[0]?.message?.content?.trim() || '';
+      const cleanedJson = rawContent.replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/\s*```$/, '').trim();
+      const parsed = JSON.parse(cleanedJson);
+      if (parsed.title) {
+        return {
+          title: parsed.title.toUpperCase(),
+          category: parsed.category || 'TECH',
+          summary: parsed.summary || parsed.title,
+          rayuTakeaway: parsed.rayuTakeaway || parsed.summary || parsed.title,
+        };
+      }
+    } else {
+      const errText = await res.text();
+      console.warn('[RAYU OpenAI Vision] HTTP Error:', res.status, errText.slice(0, 200));
+    }
+  } catch (err: any) {
+    console.warn('[RAYU OpenAI Vision] Vision analysis error:', err.message);
+  }
+  return null;
+}
+
 async function synthesizeArticleFromOcrText(
   extractedText: string,
   groqKey: string
@@ -143,16 +207,17 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { imageBase64 = '', imageUrl = '' } = body;
+    const { imageBase64 = '', originalBase64 = '', imageUrl = '' } = body;
 
-    const targetImage = imageBase64 || imageUrl;
+    const targetImage = imageBase64 || originalBase64 || imageUrl;
     if (!targetImage) {
       return NextResponse.json({ success: false, error: 'No image provided for analysis' }, { status: 400 });
     }
 
     const groqKey = (process.env.GROQ_API_KEY || '').trim().replace(/^["']|["']$/g, '');
+    const openAiKey = (process.env.OPENAI_API_KEY || '').trim().replace(/^["']|["']$/g, '');
 
-    // STAGE 1: Attempt Groq Llama 3.2 Vision directly on image (Blazing fast & ultra-accurate)
+    // STAGE 1: Attempt Groq Llama 3.2 Vision directly on image
     if (groqKey.startsWith('gsk_')) {
       const visionResult = await analyzeImageWithGroqVision(targetImage, groqKey);
       if (visionResult && visionResult.title) {
@@ -168,7 +233,23 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // STAGE 2: Fallback to Tesseract.js OCR + Groq Llama 3.3 70b
+    // STAGE 2: Attempt OpenAI GPT-4o-mini Vision directly on image
+    if (openAiKey.startsWith('sk-')) {
+      const openAiVisionResult = await analyzeImageWithOpenAiVision(targetImage, openAiKey);
+      if (openAiVisionResult && openAiVisionResult.title) {
+        console.log('[RAYU Image Analyzer] ✅ OpenAI Vision Extracted Title:', openAiVisionResult.title);
+        return NextResponse.json({
+          success: true,
+          method: 'OPENAI_VISION',
+          title: openAiVisionResult.title,
+          category: openAiVisionResult.category,
+          summary: openAiVisionResult.summary,
+          rayuTakeaway: openAiVisionResult.rayuTakeaway,
+        });
+      }
+    }
+
+    // STAGE 3: Fallback to Tesseract.js OCR + Groq Llama 3.3 70b
     let extractedText = '';
     try {
       console.log('[RAYU Image Analyzer] Fallback to Tesseract OCR text extraction...');
@@ -202,14 +283,14 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // STAGE 3: Final fallback using extracted OCR lines
-    const titleFromOcr = extractedText ? extractedText.split('\n')[0].toUpperCase().slice(0, 60) : 'IDENTIFIED VISUAL CONTENT';
+    const filenameHint = body.filename ? body.filename.replace(/\.[^/.]+$/, '').replace(/[_-]+/g, ' ').toUpperCase() : '';
+    const fallbackTitle = filenameHint && filenameHint.length > 3 ? filenameHint : 'IDENTIFIED IMAGE GRAPHIC CONCEPT';
 
     return NextResponse.json({
       success: true,
       method: 'OCR_FALLBACK',
       extractedText,
-      title: titleFromOcr || 'IDENTIFIED VISUAL CONCEPT',
+      title: fallbackTitle,
       category: 'TECH',
       summary: extractedText.slice(0, 200) || 'Visual content identified from uploaded image.',
       rayuTakeaway: 'Content identified and formatted for RAYU publication.',
@@ -224,7 +305,7 @@ export async function POST(req: NextRequest) {
       success: true,
       title: 'IDENTIFIED VISUAL CONCEPT',
       category: 'TECH',
-      summary: 'Visual content identified from uploaded graphic.',
+      summary: 'Visual content identified from uploaded screenshot.',
       rayuTakeaway: 'Content formatted for RAYU publication.',
     });
   }
