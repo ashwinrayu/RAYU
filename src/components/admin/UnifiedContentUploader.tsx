@@ -24,6 +24,22 @@ export const UnifiedContentUploader: React.FC<Props> = ({ onPostContentCreated }
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const bgImageInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Custom background image (uploaded by user, passed as sourceImage to Studio)
+  const [customBgImage, setCustomBgImage] = useState<string | null>(null);
+  const [customBgImageName, setCustomBgImageName] = useState<string>('');
+  const [bgImageDragOver, setBgImageDragOver] = useState(false);
+
+  const handleBgImageFile = (file: File) => {
+    if (!file.type.startsWith('image/')) return;
+    setCustomBgImageName(file.name);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setCustomBgImage(e.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
 
   // Helper to format clean headline from uploaded image filename
   const formatHeadlineFromFilename = (filename: string): string => {
@@ -261,7 +277,7 @@ export const UnifiedContentUploader: React.FC<Props> = ({ onPostContentCreated }
       body: bodyText.trim(),
       rayuTakeaway: takeaway.trim() || bodyText.slice(0, 100) || finalHeadline,
       sourceUrl: sourceUrl.trim(),
-      sourceImage: imagePreview || undefined,
+      sourceImage: customBgImage || imagePreview || undefined,
       publishedAt: 'JUST NOW',
     };
 
@@ -418,6 +434,15 @@ export const UnifiedContentUploader: React.FC<Props> = ({ onPostContentCreated }
             >
               🔗 LINK URL
             </button>
+            <button
+              type="button"
+              onClick={() => setInputMode('TEXT')}
+              className={`px-3 py-1 rounded font-bold transition-all cursor-pointer ${
+                inputMode === 'TEXT' ? 'bg-[#CCFF00] text-black' : 'text-neutral-400'
+              }`}
+            >
+              🖼️ UPLOAD BG
+            </button>
           </div>
         </div>
 
@@ -473,6 +498,75 @@ export const UnifiedContentUploader: React.FC<Props> = ({ onPostContentCreated }
                 {notice}
               </div>
             )}
+          </div>
+        )}
+
+        {inputMode === 'TEXT' && (
+          <div className="p-4 bg-[#050505] border border-dashed border-white/20 rounded-sm space-y-3">
+            <label className="block text-xs font-mono font-bold text-neutral-300 uppercase mb-1">
+              UPLOAD CUSTOM BACKGROUND IMAGE FOR POST CARD:
+            </label>
+            {/* Drop Zone */}
+            <div
+              className={`relative border-2 border-dashed rounded-sm transition-all cursor-pointer ${
+                bgImageDragOver ? 'border-[#CCFF00] bg-[#CCFF00]/5' : 'border-white/20 hover:border-[#CCFF00]/50'
+              } ${customBgImage ? 'p-2' : 'p-8'}`}
+              onDragOver={(e) => { e.preventDefault(); setBgImageDragOver(true); }}
+              onDragLeave={() => setBgImageDragOver(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setBgImageDragOver(false);
+                const file = e.dataTransfer.files?.[0];
+                if (file) handleBgImageFile(file);
+              }}
+              onClick={() => bgImageInputRef.current?.click()}
+            >
+              {customBgImage ? (
+                <div className="flex items-center gap-3">
+                  {/* Preview thumbnail */}
+                  <img
+                    src={customBgImage}
+                    alt="Background preview"
+                    className="w-16 h-16 object-cover rounded-sm border border-white/20 flex-shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] font-mono font-bold text-[#CCFF00] uppercase truncate">
+                      ✅ {customBgImageName || 'IMAGE UPLOADED'}
+                    </p>
+                    <p className="text-[9px] font-mono text-neutral-500 mt-0.5">
+                      This image will be used as the post card background
+                    </p>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); setCustomBgImage(null); setCustomBgImageName(''); }}
+                      className="mt-1.5 text-[9px] font-mono text-red-400 hover:text-red-300 uppercase tracking-wider"
+                    >
+                      × REMOVE IMAGE
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center gap-2 text-center pointer-events-none">
+                  <Upload size={24} className="text-neutral-600" />
+                  <span className="text-xs font-mono font-bold text-neutral-400 uppercase">
+                    DRAG & DROP OR CLICK TO UPLOAD
+                  </span>
+                  <span className="text-[9px] font-mono text-neutral-600">
+                    PNG, JPG, WEBP — used as post card background art
+                  </span>
+                </div>
+              )}
+            </div>
+            <input
+              ref={bgImageInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleBgImageFile(file);
+              }}
+            />
           </div>
         )}
 
